@@ -49,11 +49,11 @@ app.use((req, res, next) => {
 
 // Database connection pool
 export const db = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
+  host: process.env.DB_HOST || 'mysql://mysql:qvP2wuiZ0qtXcLkcoX1t462aMbchNGHC6Qv63BJSNfDIuP2VfPREet1aBXgEvFLW@o8w4kckgsoo48kgogsg4sc0s:3306/default',
   port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'rootroot',
-  database: process.env.DB_NAME || 'agency',
+  user: process.env.DB_USER || 'mysql',
+  password: process.env.DB_PASSWORD || 'qvP2wuiZ0qtXcLkcoX1t462aMbchNGHC6Qv63BJSNfDIuP2VfPREet1aBXgEvFLW',
+  database: process.env.DB_NAME || 'mysql-database-o8w4ckgso48kgogsg4sc0s',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
