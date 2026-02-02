@@ -13,8 +13,8 @@ RUN npm ci --only=production
 COPY server/ ./server/
 COPY database/ ./database/
 
-# Create .env from environment variables if needed
-# (Coolify will inject environment variables directly)
+# Note: Environment variables are injected by Coolify at runtime
+# No need to copy .env file
 
 # Expose port
 EXPOSE 5001
