@@ -1,0 +1,49 @@
+# Coolify configuration for TextileLaunch
+# This file helps Coolify understand the project structure
+
+version: '1.0'
+
+services:
+  # Database service
+  database:
+    type: mariadb
+    version: '10.11'
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+
+  # Backend service
+  backend:
+    type: dockerfile
+    dockerfile: Dockerfile.backend
+    port: 5001
+    environment:
+      DB_HOST: database
+      DB_PORT: 3306
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      PORT: 5001
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET}
+      SESSION_SECRET: ${SESSION_SECRET}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    depends_on:
+      - database
+    healthcheck:
+      path: /api/health
+      interval: 30
+
+  # Frontend service
+  frontend:
+    type: dockerfile
+    dockerfile: Dockerfile.frontend
+    port: 80
+    build_args:
+      VITE_API_URL: ${VITE_API_URL}
+    depends_on:
+      - backend

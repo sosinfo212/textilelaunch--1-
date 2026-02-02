@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # Database service
+  database:
+    image: mariadb:10.11
+    container_name: textilelaunch-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-changeme_root_password}
+      MYSQL_DATABASE: ${DB_NAME:-agency}
+      MYSQL_USER: ${DB_USER:-textilelaunch_db}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-changeme_db_password}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - textilelaunch-network
+
+  # Backend service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: textilelaunch-backend
+    restart: unless-stopped
+    environment:
+      # Database
+      DB_HOST: database
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-textilelaunch_db}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme_db_password}
+      DB_NAME: ${DB_NAME:-agency}
+      # Server
+      PORT: 5001
+      NODE_ENV: production
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      # Security
+      JWT_SECRET: ${JWT_SECRET:-changeme_jwt_secret}
+      SESSION_SECRET: ${SESSION_SECRET:-changeme_session_secret}
+      # Optional
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "5001:5001"
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5001/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - textilelaunch-network
+
+  # Frontend service
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5001/api}
+    container_name: textilelaunch-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - textilelaunch-network
+
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  textilelaunch-network:
+    driver: bridge
