@@ -1,0 +1,141 @@
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useStore } from '../context/StoreContext';
+import { ExternalLink, Edit2, Tag, Box, Truck, Trash2 } from 'lucide-react';
+
+export const SellerDashboard: React.FC = () => {
+  const { products, deleteProduct } = useStore();
+  const navigate = useNavigate();
+
+  const handleDeleteProduct = async (id: string, name: string) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${name}" ? Cette action est irréversible.`)) {
+      try {
+        await deleteProduct(id);
+      } catch (error) {
+        alert('Erreur lors de la suppression du produit');
+        console.error(error);
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Vos Produits</h1>
+          <p className="mt-1 text-sm text-gray-500">Gérez votre catalogue et accédez aux landing pages.</p>
+        </div>
+      </div>
+
+      {products.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-lg border-2 border-dashed border-gray-300">
+          <Tag className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun produit</h3>
+          <p className="mt-1 text-sm text-gray-500">Commencez par ajouter votre premier article textile.</p>
+          <div className="mt-6">
+            <Link
+              to="/add-product"
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-600 hover:bg-brand-700"
+            >
+              Créer un produit
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {products.map((product) => (
+            <div key={product.id} className="bg-white overflow-hidden shadow rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
+              <div className="aspect-w-16 aspect-h-9 bg-gray-200 h-48 overflow-hidden relative">
+                {product.images && product.images.length > 0 ? (
+                  <img 
+                    src={product.images[0]} 
+                    alt={product.name} 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      // Replace blob URLs or invalid images with placeholder
+                      if (target.src.startsWith('blob:') || !target.src) {
+                        target.src = 'https://picsum.photos/400/300';
+                        target.onerror = null; // Prevent infinite loop
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-400 bg-gray-100">
+                    <span className="text-sm">Pas d'image</span>
+                  </div>
+                )}
+                <div className="absolute top-2 right-2 flex flex-col items-end">
+                   {product.regularPrice && product.regularPrice > product.price && (
+                       <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded mb-1 line-through opacity-80 backdrop-blur shadow-sm">
+                           {product.regularPrice} €
+                       </span>
+                   )}
+                  <span className="bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-gray-900 shadow-sm">
+                    {product.price} €
+                  </span>
+                </div>
+              </div>
+              <div className="p-5">
+                <h3 className="text-lg font-medium text-gray-900 truncate" title={product.name}>
+                  {product.name}
+                </h3>
+                
+                {/* Category & Supplier Tags */}
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {product.category && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                            <Box size={10} className="mr-1" />
+                            {product.category}
+                        </span>
+                    )}
+                    {product.supplier && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                            <Truck size={10} className="mr-1" />
+                            {product.supplier}
+                        </span>
+                    )}
+                </div>
+
+                <p className="mt-2 text-sm text-gray-500 line-clamp-2">
+                  {product.description}
+                </p>
+                
+                <div className="mt-4 flex flex-wrap gap-2">
+                    {product.attributes.map(attr => (
+                        <span key={attr.name} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                            {attr.name}: {attr.options.length}
+                        </span>
+                    ))}
+                </div>
+
+                <div className="mt-6 flex gap-3">
+                  <Link
+                    to={`/product/${product.id}`}
+                    className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-600 hover:bg-brand-700"
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Voir la page
+                  </Link>
+                  <Link 
+                    to={`/edit-product/${product.id}`}
+                    className="flex-shrink-0 inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Link>
+                  <button
+                    onClick={() => handleDeleteProduct(product.id, product.name)}
+                    className="flex-shrink-0 inline-flex items-center px-3 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
+                    title="Supprimer le produit"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};

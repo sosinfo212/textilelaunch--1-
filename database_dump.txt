@@ -1,0 +1,121 @@
+-- Database Dump for TextileLaunch
+-- Generated based on DEVELOPER_DOCS.md and AuthContext.tsx
+
+-- ==========================================
+-- Schema Definition
+-- ==========================================
+
+-- Table: users
+CREATE TABLE IF NOT EXISTS users (
+  id VARCHAR(191) PRIMARY KEY,
+  email VARCHAR(191) UNIQUE NOT NULL,
+  password VARCHAR(191),
+  name VARCHAR(191),
+  role VARCHAR(50) DEFAULT 'user',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Table: products
+CREATE TABLE IF NOT EXISTS products (
+  id VARCHAR(191) PRIMARY KEY,
+  owner_id VARCHAR(191) NOT NULL,
+  name VARCHAR(191) NOT NULL,
+  description TEXT,
+  price DECIMAL(10, 2) NOT NULL,
+  regular_price DECIMAL(10, 2),
+  images JSON, -- Stored as ["url1", "url2"]
+  attributes JSON, -- Stored as [{name: "Taille", options: ["S", "M"]}]
+  category VARCHAR(100),
+  supplier VARCHAR(100),
+  landing_page_template_id VARCHAR(191),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (owner_id) REFERENCES users(id)
+);
+
+-- Table: orders
+CREATE TABLE IF NOT EXISTS orders (
+  id VARCHAR(191) PRIMARY KEY,
+  seller_id VARCHAR(191) NOT NULL,
+  product_id VARCHAR(191) NOT NULL,
+  product_name VARCHAR(191),
+  product_price DECIMAL(10, 2),
+  product_supplier VARCHAR(100),
+  customer_info JSON, -- {fullName, address, city, phone}
+  selected_attributes JSON, -- {Taille: "M", Couleur: "Rouge"}
+  status VARCHAR(50) DEFAULT 'pending', -- pending, shipped, completed
+  viewed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (seller_id) REFERENCES users(id),
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+-- Table: landing_page_templates
+CREATE TABLE IF NOT EXISTS landing_page_templates (
+  id VARCHAR(191) PRIMARY KEY,
+  owner_id VARCHAR(191) NOT NULL,
+  name VARCHAR(191) NOT NULL,
+  mode VARCHAR(20) DEFAULT 'visual', -- 'visual' or 'code'
+  elements JSON, -- The JSON tree for visual builder
+  html_code TEXT, -- Raw HTML for code mode
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (owner_id) REFERENCES users(id)
+);
+
+-- Indexes
+CREATE INDEX idx_products_owner ON products(owner_id);
+CREATE INDEX idx_orders_seller ON orders(seller_id);
+
+-- ==========================================
+-- Seed Data
+-- ==========================================
+
+-- Default Admin User
+-- Note: In a production environment, passwords should be hashed (e.g., bcrypt).
+INSERT INTO users (id, email, password, name, role) 
+VALUES ('usr_admin', 'admin@textile.com', 'admin', 'Admin Vendeur', 'admin')
+ON DUPLICATE KEY UPDATE email=email;
+
+-- Seed Templates (Extracted from constants/templateLibrary.ts)
+-- Note: Only the first 5 templates are shown here as examples.
+-- In a full migration, you would loop through TEMPLATE_LIBRARY to insert all 30.
+
+INSERT INTO landing_page_templates (id, owner_id, name, mode, elements) VALUES
+(
+  't_01', 
+  'usr_admin', 
+  'Maroc Standard', 
+  'visual', 
+  '[{"id":"el_01_1","type":"heading","content":"🔥 PROMO : LIVRAISON GRATUITE 🔥","style":{"width":"100%","backgroundColor":"#dc2626","color":"#fff","textAlign":"center","fontSize":"text-xl","padding":"1rem"}},{"id":"el_01_2","type":"product-title","content":"","style":{"width":"100%","textAlign":"center","padding":"1rem"}},{"id":"el_01_3","type":"product-gallery","content":"","style":{"width":"100%","padding":"0 1rem"}},{"id":"el_01_4","type":"product-price","content":"","style":{"width":"100%","textAlign":"center","color":"#dc2626","fontSize":"text-4xl","padding":"1rem"}},{"id":"el_01_5","type":"trust-badges","content":"","style":{"width":"100%","padding":"1rem"}},{"id":"el_01_6","type":"product-description","content":"","style":{"width":"100%","padding":"1rem"}},{"id":"el_01_7","type":"order-form","content":"","style":{"width":"100%","boxShadow":"lg","border":"2px dashed #dc2626","padding":"1rem"}}]'
+),
+(
+  't_02', 
+  'usr_admin', 
+  'Clean Blue', 
+  'visual', 
+  '[{"id":"el_02_1","type":"heading","content":"Satisfait ou Remboursé","style":{"width":"100%","backgroundColor":"#eff6ff","color":"#1e40af","textAlign":"center","padding":"1rem"}},{"id":"el_02_2","type":"product-title","content":"","style":{"width":"100%","textAlign":"center","color":"#1e40af","padding":"1rem"}},{"id":"el_02_3","type":"product-gallery","content":"","style":{"width":"100%","padding":"1rem"}},{"id":"el_02_4","type":"product-price","content":"","style":{"width":"100%","textAlign":"center","color":"#2563eb","padding":"1rem"}},{"id":"el_02_5","type":"product-description","content":"","style":{"width":"100%","padding":"1rem"}},{"id":"el_02_6","type":"order-form","content":"","style":{"width":"100%","backgroundColor":"#f9fafb","borderRadius":"1rem","padding":"1rem"}}]'
+),
+(
+  't_03', 
+  'usr_admin', 
+  'Simple White', 
+  'visual', 
+  '[{"id":"el_03_1","type":"product-gallery","content":"","style":{"width":"100%","padding":"2rem 1rem"}},{"id":"el_03_2","type":"product-title","content":"","style":{"width":"100%","textAlign":"left","fontSize":"text-2xl","padding":"1rem"}},{"id":"el_03_3","type":"product-price","content":"","style":{"width":"100%","textAlign":"left","color":"#333","padding":"1rem"}},{"id":"el_03_4","type":"product-description","content":"","style":{"width":"100%","textAlign":"left","padding":"1rem"}},{"id":"el_03_5","type":"order-form","content":"","style":{"width":"100%","padding":"1rem"}}]'
+),
+(
+  't_04', 
+  'usr_admin', 
+  'Elegant Serif', 
+  'visual', 
+  '[{"id":"el_04_1","type":"heading","content":"COLLECTION 2024","style":{"width":"100%","textAlign":"center","color":"#4b5563","fontSize":"text-sm","padding":"1rem"}},{"id":"el_04_2","type":"product-title","content":"","style":{"width":"100%","textAlign":"center","fontSize":"text-5xl","fontFamily":"serif","padding":"1rem"}},{"id":"el_04_3","type":"separator","content":"","style":{"width":"100%","padding":"1rem"}},{"id":"el_04_4","type":"product-gallery","content":"","style":{"width":"100%","padding":"1rem"}},{"id":"el_04_5","type":"product-price","content":"","style":{"width":"100%","textAlign":"center","fontSize":"text-3xl","padding":"1rem"}},{"id":"el_04_6","type":"product-description","content":"","style":{"width":"100%","textAlign":"center","fontFamily":"serif","padding":"1rem"}},{"id":"el_04_7","type":"order-form","content":"","style":{"width":"100%","padding":"1rem"}}]'
+),
+(
+  't_05', 
+  'usr_admin', 
+  'Compact Mobile', 
+  'visual', 
+  '[{"id":"el_05_1","type":"product-title","content":"","style":{"width":"100%","fontSize":"text-xl","textAlign":"center","padding":"1rem"}},{"id":"el_05_2","type":"product-gallery","content":"","style":{"width":"100%","padding":"0"}},{"id":"el_05_3","type":"product-price","content":"","style":{"width":"100%","textAlign":"center","backgroundColor":"#f3f4f6","padding":"1rem"}},{"id":"el_05_4","type":"product-description","content":"","style":{"width":"100%","fontSize":"text-sm","padding":"1rem"}},{"id":"el_05_5","type":"order-form","content":"","style":{"width":"100%","padding":"1rem"}}]'
+);
