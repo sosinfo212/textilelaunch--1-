@@ -1,174 +1,382 @@
-# TextileLaunch - Deployment Guide
+# TextileLaunch - Deployment Guide for AlmaLinux 10
 
-This guide will help you deploy TextileLaunch with MySQL database integration.
+This guide explains how to deploy TextileLaunch on AlmaLinux 10.
 
 ## Prerequisites
 
-- Node.js (v18 or higher)
-- MySQL Server (v8.0 or higher)
-- npm or yarn
+- Fresh AlmaLinux 10 server
+- Root or sudo access
+- Domain name: **trendycosmeticx.com** (configured by default, can be changed)
 
-## Database Setup
+## Quick Deployment
 
-1. **Start MySQL Server**
+### Option 1: Deploy from GitHub (Recommended - Easiest)
+
+**On your AlmaLinux 10 server, download and run the script directly:**
+
+```bash
+# Navigate to a temporary directory
+cd /tmp
+
+# Download the deployment script from GitHub
+curl -O https://raw.githubusercontent.com/sosinfo212/textilelaunch--1-/main/deploy.sh
+
+# Make it executable
+chmod +x deploy.sh
+
+# Run the deployment (script will automatically clone from GitHub)
+sudo ./deploy.sh
+```
+
+**Or clone the repository first:**
+```bash
+# Clone the repository
+git clone https://github.com/sosinfo212/textilelaunch--1-.git
+cd textilelaunch--1-
+
+# Make script executable
+chmod +x deploy.sh
+
+# Run deployment
+sudo ./deploy.sh
+```
+
+### Option 2: Deploy from Local Files
+
+**If you have the files locally and want to upload them:**
+
+1. **Upload application files to server**
    ```bash
-   # On macOS with Homebrew
-   brew services start mysql
+   # On your local machine
+   scp deploy.sh user@your-server:/tmp/
+   scp -r . user@your-server:/tmp/textilelaunch
    
-   # On Linux
-   sudo systemctl start mysql
-   
-   # On Windows
-   # Start MySQL from Services or MySQL Workbench
+   # On server
+   cd /tmp/textilelaunch
+   chmod +x ../deploy.sh
    ```
 
-2. **Create Database and Tables**
+2. **Run deployment script**
    ```bash
-   # Connect to MySQL
-   mysql -u root -p
+   # From the application directory
+   sudo /tmp/deploy.sh
    
-   # Run the schema file
-   source database/schema.sql
-   
-   # Or manually:
-   mysql -u root -p < database/schema.sql
+   # Or copy deploy.sh to the application directory first
+   cp /tmp/deploy.sh .
+   chmod +x deploy.sh
+   sudo ./deploy.sh
    ```
 
-   The schema will:
-   - Create the `agency` database
-   - Create all required tables (users, products, orders, landing_page_templates, app_settings)
-   - Insert default admin user (email: `admin@textile.com`, password: `admin`)
+### Option 3: Custom GitHub Repository
 
-## Installation
+```bash
+# Deploy from a different GitHub repository
+sudo GITHUB_REPO=https://github.com/user/repo.git GITHUB_BRANCH=main ./deploy.sh
+```
 
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+### Access the Application
 
-2. **Configure Environment Variables**
-   
-   The `.env` file is already created with default values:
-   ```env
-   DB_HOST=localhost
-   DB_PORT=3306
-   DB_USER=root
-   DB_PASSWORD=rootroot
-   DB_NAME=agency
-   PORT=5000
-   FRONTEND_URL=http://localhost:3000
-   ```
+- Open browser: `http://your-server-ip`
+- Login with: `admin@textile.com` / `admin`
 
-   Update these values if your MySQL configuration is different.
+## Manual Deployment Steps
 
-## Running the Application
+If you prefer manual deployment:
 
-### Development Mode
+### 1. Install Dependencies
 
-1. **Start the Backend Server**
-   ```bash
-   npm run server
-   # Or with auto-reload:
-   npm run dev:server
-   ```
-   
-   The server will start on `http://localhost:5000`
+```bash
+# Update system
+sudo dnf update -y
 
-2. **Start the Frontend (in a new terminal)**
-   ```bash
-   npm run dev
-   ```
-   
-   The frontend will start on `http://localhost:3000`
+# Install required packages
+sudo dnf install -y git curl wget mariadb-server mariadb nginx firewalld openssl
 
-### Production Mode
+# Install Node.js 20
+curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+sudo dnf install -y nodejs
+```
 
-1. **Build the Frontend**
-   ```bash
-   npm run build
-   ```
+### 2. Setup MySQL
 
-2. **Start the Backend**
-   ```bash
-   npm start
-   ```
+```bash
+# Start MariaDB
+sudo systemctl enable mariadb
+sudo systemctl start mariadb
 
-   For production, consider using:
-   - PM2 for process management: `pm2 start server/index.js`
-   - Nginx as reverse proxy
-   - Environment-specific `.env` files
+# Secure MariaDB (set root password)
+sudo mysql_secure_installation
 
-## Default Login Credentials
+# Create database
+mysql -u root -p
+```
 
-- **Email**: `admin@textile.com`
-- **Password**: `admin`
+```sql
+CREATE DATABASE agency CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'textilelaunch_db'@'localhost' IDENTIFIED BY 'your_secure_password';
+GRANT ALL PRIVILEGES ON agency.* TO 'textilelaunch_db'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
 
-⚠️ **Important**: Change the default admin password after first login!
+### 3. Setup Application
 
-## API Endpoints
+```bash
+# Create application user
+sudo useradd -r -s /bin/bash -d /opt/textilelaunch textilelaunch
 
-The backend API runs on `http://localhost:5000/api`:
+# Copy application files
+sudo mkdir -p /opt/textilelaunch
+sudo cp -r /path/to/application/* /opt/textilelaunch/
+sudo chown -R textilelaunch:textilelaunch /opt/textilelaunch
 
-- **Auth**: `/api/auth/login`, `/api/auth/me`, `/api/auth/users`
-- **Products**: `/api/products`, `/api/products/:id`
-- **Orders**: `/api/orders`, `/api/orders/:id`
-- **Templates**: `/api/templates`, `/api/templates/:id`
-- **Settings**: `/api/settings`
-- **Gemini**: `/api/gemini/generate`
+# Install dependencies
+cd /opt/textilelaunch
+sudo -u textilelaunch npm install --production
+sudo -u textilelaunch npm run build
+```
+
+### 4. Configure Environment
+
+```bash
+# Create .env file
+sudo -u textilelaunch nano /opt/textilelaunch/.env
+```
+
+```env
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=textilelaunch_db
+DB_PASSWORD=your_secure_password
+DB_NAME=agency
+
+PORT=5001
+FRONTEND_URL=http://localhost:3000
+NODE_ENV=production
+
+JWT_SECRET=your_jwt_secret_here
+SESSION_SECRET=your_session_secret_here
+
+GEMINI_API_KEY=your_gemini_key_optional
+VITE_API_URL=http://localhost:5001/api
+```
+
+### 5. Initialize Database
+
+```bash
+mysql -u textilelaunch_db -p agency < /opt/textilelaunch/database/schema.sql
+```
+
+### 6. Create Systemd Service
+
+```bash
+sudo nano /etc/systemd/system/textilelaunch.service
+```
+
+```ini
+[Unit]
+Description=TextileLaunch Backend API
+After=network.target mariadb.service
+
+[Service]
+Type=simple
+User=textilelaunch
+WorkingDirectory=/opt/textilelaunch
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/textilelaunch/.env
+ExecStart=/usr/bin/node /opt/textilelaunch/server/index.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable textilelaunch
+sudo systemctl start textilelaunch
+```
+
+### 7. Configure Nginx
+
+```bash
+sudo nano /etc/nginx/conf.d/textilelaunch.conf
+```
+
+```nginx
+upstream textilelaunch_backend {
+    server localhost:5001;
+}
+
+server {
+    listen 80;
+    server_name your-domain.com;  # Replace with your domain
+
+    root /opt/textilelaunch/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api {
+        proxy_pass http://textilelaunch_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        proxy_cookie_path / /;
+        proxy_set_header Cookie $http_cookie;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+```
+
+```bash
+sudo systemctl enable nginx
+sudo systemctl start nginx
+```
+
+### 8. Configure Firewall
+
+```bash
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-service=https
+sudo firewall-cmd --reload
+```
+
+### 9. SSL Certificate (Optional but Recommended)
+
+```bash
+# Install Certbot
+sudo dnf install -y certbot python3-certbot-nginx
+
+# Get certificate
+sudo certbot --nginx -d your-domain.com
+
+# Auto-renewal
+sudo systemctl enable certbot.timer
+```
+
+## Service Management
+
+### Check Status
+```bash
+sudo systemctl status textilelaunch
+sudo systemctl status nginx
+sudo systemctl status mariadb
+```
+
+### View Logs
+```bash
+# Backend logs
+sudo journalctl -u textilelaunch -f
+
+# Nginx logs
+sudo journalctl -u nginx -f
+sudo tail -f /var/log/nginx/error.log
+
+# Application logs
+sudo tail -f /opt/textilelaunch/logs/*.log
+```
+
+### Restart Services
+```bash
+sudo systemctl restart textilelaunch
+sudo systemctl restart nginx
+```
 
 ## Troubleshooting
 
-### Database Connection Issues
+### Backend not starting
+1. Check logs: `sudo journalctl -u textilelaunch -n 50`
+2. Verify .env file: `sudo cat /opt/textilelaunch/.env`
+3. Test database connection: `mysql -u textilelaunch_db -p agency`
 
-1. **Check MySQL is running**
+### Nginx 502 Bad Gateway
+1. Check backend is running: `sudo systemctl status textilelaunch`
+2. Check backend port: `sudo netstat -tlnp | grep 5001`
+3. Check backend logs for errors
+
+### Database connection errors
+1. Verify MariaDB is running: `sudo systemctl status mariadb`
+2. Check credentials in .env file
+3. Test connection: `mysql -u textilelaunch_db -p agency`
+
+### Frontend not loading
+1. Check build exists: `ls -la /opt/textilelaunch/dist`
+2. Rebuild if needed: `cd /opt/textilelaunch && sudo -u textilelaunch npm run build`
+3. Check Nginx error logs: `sudo tail -f /var/log/nginx/error.log`
+
+## Security Recommendations
+
+1. **Change default admin password** after first login
+2. **Use strong database passwords** (generate with `openssl rand -base64 32`)
+3. **Enable SSL/HTTPS** with Let's Encrypt
+4. **Configure firewall** to only allow necessary ports
+5. **Keep system updated**: `sudo dnf update -y`
+6. **Set secure file permissions**:
    ```bash
-   mysql -u root -p -e "SELECT 1"
+   sudo chmod 600 /opt/textilelaunch/.env
+   sudo chown textilelaunch:textilelaunch /opt/textilelaunch/.env
    ```
 
-2. **Verify database exists**
-   ```bash
-   mysql -u root -p -e "SHOW DATABASES LIKE 'agency'"
-   ```
+## Backup
 
-3. **Check credentials in `.env`**
-   - Ensure `DB_USER` and `DB_PASSWORD` match your MySQL credentials
-   - Verify `DB_NAME` is `agency`
+### Database Backup
+```bash
+# Create backup
+mysqldump -u textilelaunch_db -p agency > backup_$(date +%Y%m%d).sql
 
-### Port Already in Use
+# Restore backup
+mysql -u textilelaunch_db -p agency < backup_20240101.sql
+```
 
-If port 5000 or 3000 is already in use:
+### Application Backup
+```bash
+sudo tar -czf textilelaunch_backup_$(date +%Y%m%d).tar.gz /opt/textilelaunch
+```
 
-1. **Change backend port**: Update `PORT` in `.env`
-2. **Change frontend port**: Update `vite.config.ts` server.port
-3. **Update API URL**: Set `VITE_API_URL` in `.env` to match backend port
+## Updates
 
-### CORS Issues
+To update the application:
 
-If you see CORS errors:
+```bash
+# Stop service
+sudo systemctl stop textilelaunch
 
-1. Update `FRONTEND_URL` in `.env` to match your frontend URL
-2. Restart the backend server
+# Backup current version
+sudo cp -r /opt/textilelaunch /opt/textilelaunch.backup
 
-## Data Migration from localStorage
+# Update files
+cd /opt/textilelaunch
+sudo -u textilelaunch git pull  # If using git
+# Or copy new files manually
 
-If you have existing data in localStorage:
+# Update dependencies
+sudo -u textilelaunch npm install --production
+sudo -u textilelaunch npm run build
 
-1. The app will automatically use the database once connected
-2. Old localStorage data will be ignored
-3. To migrate existing data, you can:
-   - Export from localStorage manually
-   - Import via the API endpoints
-   - Or re-enter data through the UI
-
-## Next Steps
-
-- Configure your Gemini API key in Settings for AI-powered descriptions
-- Customize your shop name and logo in Settings
-- Add products and create landing pages
-- Share your product landing pages with customers
+# Restart service
+sudo systemctl start textilelaunch
+```
 
 ## Support
 
-For issues or questions, check:
-- `DEVELOPER_DOCS.md` for architecture details
-- `README.md` for general project information
+For issues:
+- Check logs: `sudo journalctl -u textilelaunch -f`
+- Verify configuration files
+- Check database connectivity
+- Review Nginx configuration
