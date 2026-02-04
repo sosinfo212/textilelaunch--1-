@@ -259,7 +259,6 @@ export const ProductLanding: React.FC = () => {
                   <div className="h-24"></div>
               </div>
           );
-      }
   }
 
   // 2. High-Converting Moroccan COD Layout (Default)
