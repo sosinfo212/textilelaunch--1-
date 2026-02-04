@@ -91,6 +91,20 @@ export const ProductLanding: React.FC = () => {
     loadProduct();
   }, [productId, getProduct]);
 
+  // Update page title when product is loaded
+  useEffect(() => {
+    if (product) {
+      document.title = `${product.name} - TextileLaunch`;
+    } else {
+      document.title = 'TextileLaunch';
+    }
+    
+    // Cleanup: reset title when component unmounts
+    return () => {
+      document.title = 'TextileLaunch';
+    };
+  }, [product]);
+
   // Load template if product has one
   useEffect(() => {
     const loadTemplate = async () => {
