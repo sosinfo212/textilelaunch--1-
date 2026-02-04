@@ -45,7 +45,7 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 const DEFAULT_SETTINGS: AppSettings = {
     userId: '',
-    shopName: 'TextileLaunch Store',
+    shopName: 'Trendy Cosmetix Store',
     logoUrl: '',
     geminiApiKey: ''
 };

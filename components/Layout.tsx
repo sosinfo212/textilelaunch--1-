@@ -37,7 +37,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                         <ShoppingBag size={20} />
                     </div>
                   )}
-                  <span className="font-bold text-xl text-gray-900 tracking-tight">{settings.shopName || 'TextileLaunch'}</span>
+                  <span className="font-bold text-xl text-gray-900 tracking-tight">{settings.shopName || 'Trendy Cosmetix'}</span>
                 </Link>
               </div>
               <div className="hidden sm:ml-8 sm:flex sm:space-x-8">

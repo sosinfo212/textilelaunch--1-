@@ -88,6 +88,14 @@ app.use(cookieParser());
 const cookieSecure = process.env.COOKIE_SECURE === 'true';
 const cookieSameSite = process.env.COOKIE_SAMESITE || (cookieSecure ? 'none' : 'lax');
 
+console.log('🍪 Cookie configuration:', {
+  secure: cookieSecure,
+  sameSite: cookieSameSite,
+  COOKIE_SECURE: process.env.COOKIE_SECURE,
+  COOKIE_SAMESITE: process.env.COOKIE_SAMESITE,
+  FRONTEND_URL: process.env.FRONTEND_URL
+});
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'textilelaunch-session-secret-change-in-production',
   resave: false,
@@ -153,7 +161,7 @@ app.use('/api/gemini', geminiRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'TextileLaunch API is running' });
+  res.json({ status: 'ok', message: 'Trendy Cosmetix API is running' });
 });
 
 app.listen(PORT, '0.0.0.0', () => {

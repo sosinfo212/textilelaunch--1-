@@ -94,14 +94,14 @@ export const ProductLanding: React.FC = () => {
   // Update page title when product is loaded
   useEffect(() => {
     if (product) {
-      document.title = `${product.name} - TextileLaunch`;
+      document.title = `${product.name} - Trendy Cosmetix`;
     } else {
-      document.title = 'TextileLaunch';
+      document.title = 'Trendy Cosmetix';
     }
     
     // Cleanup: reset title when component unmounts
     return () => {
-      document.title = 'TextileLaunch';
+      document.title = 'Trendy Cosmetix';
     };
   }, [product]);
 

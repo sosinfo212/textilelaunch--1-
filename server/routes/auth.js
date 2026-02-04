@@ -241,7 +241,7 @@
       // Create default settings for new user
       await db.execute(
         'INSERT INTO app_settings (user_id, shop_name) VALUES (?, ?)',
-        [id, 'TextileLaunch Store']
+        [id, 'Trendy Cosmetix Store']
       );
 
       res.json({ user: { id, email, name, role } });

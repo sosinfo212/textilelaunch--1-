@@ -1,4 +1,4 @@
--- TextileLaunch Database Schema
+-- Trendy Cosmetix Database Schema
 -- Database: agency
 
 CREATE DATABASE IF NOT EXISTS agency;
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS landing_page_templates (
 -- App Settings Table (for user-specific settings)
 CREATE TABLE IF NOT EXISTS app_settings (
   user_id VARCHAR(191) PRIMARY KEY,
-  shop_name VARCHAR(191) DEFAULT 'TextileLaunch Store',
+  shop_name VARCHAR(191) DEFAULT 'Trendy Cosmetix Store',
   logo_url TEXT,
   gemini_api_key TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -154,4 +154,4 @@ VALUES ('usr_admin', 'admin@textile.com', 'admin', 'Admin Vendeur', 'admin');
 
 -- Insert default settings for admin
 INSERT IGNORE INTO app_settings (user_id, shop_name) 
-VALUES ('usr_admin', 'TextileLaunch Store');
+VALUES ('usr_admin', 'Trendy Cosmetix Store');

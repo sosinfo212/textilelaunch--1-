@@ -27,7 +27,7 @@ router.get('/', authenticate, async (req, res) => {
       // Create default settings if none exist
       await db.execute(
         'INSERT INTO app_settings (user_id, shop_name) VALUES (?, ?)',
-        [userId, 'TextileLaunch Store']
+        [userId, 'Trendy Cosmetix Store']
       );
       
       const [newSettings] = await db.execute(
@@ -66,7 +66,7 @@ router.put('/', authenticate, async (req, res) => {
       // Create new settings
       await db.execute(
         'INSERT INTO app_settings (user_id, shop_name, logo_url, gemini_api_key) VALUES (?, ?, ?, ?)',
-        [userId, shopName || 'TextileLaunch Store', logoUrl || '', geminiApiKey || '']
+        [userId, shopName || 'Trendy Cosmetix Store', logoUrl || '', geminiApiKey || '']
       );
     } else {
       // Update existing settings
@@ -131,7 +131,7 @@ router.get('/:userId', async (req, res) => {
 function formatSettings(row) {
   return {
     userId: row.user_id,
-    shopName: row.shop_name || 'TextileLaunch Store',
+    shopName: row.shop_name || 'Trendy Cosmetix Store',
     logoUrl: row.logo_url || '',
     geminiApiKey: row.gemini_api_key || ''
   };
