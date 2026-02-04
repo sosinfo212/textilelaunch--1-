@@ -6,11 +6,15 @@ import { isVideo, isImage } from '../src/utils/imageUtils';
 import { formatPrice } from '../src/utils/currency';
 import { CheckCircle, ArrowLeft, Phone, MapPin, Truck, ShieldCheck, Star, ShoppingCart, Plus, Minus, Home, AlertCircle, Video } from 'lucide-react';
 import { LandingPageRenderer } from '../components/LandingPageRenderer';
+import { productsAPI, templatesAPI } from '../src/utils/api';
 
 export const ProductLanding: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
   const { getProduct, addOrder, getTemplate } = useStore();
   const [product, setProduct] = useState<Product | undefined>(undefined);
+  const [template, setTemplate] = useState<any>(undefined);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Form State
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
@@ -40,28 +44,103 @@ export const ProductLanding: React.FC = () => {
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (productId) {
-      const p = getProduct(productId);
-      setProduct(p);
-      if (p && Array.isArray(p.attributes) && p.attributes.length > 0) {
-        // Pre-select first options
-        const initialAttrs: Record<string, string> = {};
-        p.attributes.forEach(attr => {
-            if (attr.options.length > 0) initialAttrs[attr.name] = attr.options[0];
-        });
-        setSelectedAttributes(initialAttrs);
+    const loadProduct = async () => {
+      if (!productId) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // First try to get from store (if user is logged in)
+        const storeProduct = getProduct(productId);
+        if (storeProduct) {
+          setProduct(storeProduct);
+          if (Array.isArray(storeProduct.attributes) && storeProduct.attributes.length > 0) {
+            const initialAttrs: Record<string, string> = {};
+            storeProduct.attributes.forEach(attr => {
+              if (attr.options.length > 0) initialAttrs[attr.name] = attr.options[0];
+            });
+            setSelectedAttributes(initialAttrs);
+          }
+          setLoading(false);
+          return;
+        }
+        
+        // If not in store, fetch from API (public access)
+        const response = await productsAPI.getById(productId);
+        if (response.product) {
+          setProduct(response.product);
+          if (Array.isArray(response.product.attributes) && response.product.attributes.length > 0) {
+            const initialAttrs: Record<string, string> = {};
+            response.product.attributes.forEach((attr: any) => {
+              if (attr.options && attr.options.length > 0) initialAttrs[attr.name] = attr.options[0];
+            });
+            setSelectedAttributes(initialAttrs);
+          }
+        } else {
+          setError('Product not found');
+        }
+      } catch (err: any) {
+        console.error('Error loading product:', err);
+        setError(err.message || 'Failed to load product');
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+    
+    loadProduct();
   }, [productId, getProduct]);
 
-  if (!product) {
+  // Load template if product has one
+  useEffect(() => {
+    const loadTemplate = async () => {
+      if (!product?.landingPageTemplateId) {
+        setTemplate(undefined);
+        return;
+      }
+      
+      // Try to get from store first
+      const storeTemplate = getTemplate(product.landingPageTemplateId);
+      if (storeTemplate) {
+        setTemplate(storeTemplate);
+        return;
+      }
+      
+      // If not in store, fetch from API (public access)
+      try {
+        const response = await templatesAPI.getById(product.landingPageTemplateId);
+        if (response.template) {
+          setTemplate(response.template);
+        }
+      } catch (err) {
+        console.error('Error loading template:', err);
+        // Continue without template - will use default layout
+      }
+    };
+    
+    loadTemplate();
+  }, [product?.landingPageTemplateId, getTemplate]);
+
+  if (loading) {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 font-cairo" dir="rtl">
-            <div className="text-center">
-                <h2 className="text-xl font-bold text-gray-900">المنتج غير موجود</h2>
-                <Link to="/" className="mt-4 text-brand-600 hover:text-brand-500">العودة للمتجر</Link>
-            </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 font-cairo" dir="rtl">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">جاري التحميل...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 font-cairo" dir="rtl">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-gray-900">المنتج غير موجود</h2>
+          <p className="text-gray-600 mt-2">{error || 'لم يتم العثور على المنتج'}</p>
+          <Link to="/" className="mt-4 inline-block text-brand-600 hover:text-brand-500">العودة للمتجر</Link>
+        </div>
+      </div>
     );
   }
 
@@ -151,9 +230,7 @@ export const ProductLanding: React.FC = () => {
   }
 
   // 1. Check for Custom Template (Legacy Builder)
-  if (product.landingPageTemplateId) {
-      const template = getTemplate(product.landingPageTemplateId);
-      if (template) {
+  if (product.landingPageTemplateId && template) {
           return (
               <div className="min-h-screen bg-white font-cairo" dir="rtl">
                   <main className="w-full">
