@@ -120,7 +120,25 @@ export const authenticate = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Authentication error:', error);
-    return res.status(403).json({ error: 'Invalid token.' });
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage
+    });
+    
+    // Provide more specific error messages
+    if (error.code === 'ER_ACCESS_DENIED_ERROR' || error.code === 'ECONNREFUSED') {
+      return res.status(500).json({ 
+        error: 'Database connection error. Please contact administrator.',
+        details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+      });
+    }
+    
+    return res.status(403).json({ 
+      error: 'Authentication failed.',
+      details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+    });
   }
 };
 

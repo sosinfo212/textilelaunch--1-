@@ -123,6 +123,25 @@
       console.error('Error stack:', error.stack);
       console.error('Error name:', error.name);
       console.error('Error message:', error.message);
+      console.error('Error code:', error.code);
+      console.error('Error sqlState:', error.sqlState);
+      
+      // Check for database connection errors
+      if (error.code === 'ER_ACCESS_DENIED_ERROR' || error.message?.includes('Access denied')) {
+        console.error('❌ Database access denied - check DB_USER and DB_PASSWORD in .env');
+        return res.status(500).json({ 
+          error: 'Database configuration error',
+          details: process.env.NODE_ENV !== 'production' ? 'Database access denied. Check server configuration.' : undefined
+        });
+      }
+      
+      if (error.code === 'ECONNREFUSED' || error.message?.includes('connect')) {
+        console.error('❌ Database connection refused');
+        return res.status(500).json({ 
+          error: 'Database connection error',
+          details: process.env.NODE_ENV !== 'production' ? 'Cannot connect to database. Check DB_HOST and DB_PORT.' : undefined
+        });
+      }
       
       // Check for specific errors
       if (error.message && error.message.includes('bcrypt')) {
