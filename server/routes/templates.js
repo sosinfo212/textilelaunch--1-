@@ -58,9 +58,9 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create template
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
-    const userId = getUserFromHeader(req);
+    const userId = req.userId; // From authenticate middleware
     
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -97,9 +97,9 @@ router.post('/', async (req, res) => {
 });
 
 // Update template
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticate, async (req, res) => {
   try {
-    const userId = getUserFromHeader(req);
+    const userId = req.userId; // From authenticate middleware
     const { id } = req.params;
 
     if (!userId) {
@@ -145,9 +145,9 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete template
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
-    const userId = getUserFromHeader(req);
+    const userId = req.userId; // From authenticate middleware
     const { id } = req.params;
 
     if (!userId) {

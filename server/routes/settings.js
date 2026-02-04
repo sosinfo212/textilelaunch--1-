@@ -46,9 +46,9 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // Update settings
-router.put('/', async (req, res) => {
+router.put('/', authenticate, async (req, res) => {
   try {
-    const userId = getUserFromHeader(req);
+    const userId = req.userId; // From authenticate middleware
     
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });

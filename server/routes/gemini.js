@@ -1,18 +1,14 @@
 import express from 'express';
 import { GoogleGenAI } from '@google/genai';
 import { db } from '../index.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Middleware to get user ID from header
-const getUserFromHeader = (req) => {
-  return req.headers['x-user-id'] || null;
-};
-
 // Proxy endpoint for Gemini API
-router.post('/generate', async (req, res) => {
+router.post('/generate', authenticate, async (req, res) => {
   try {
-    const userId = getUserFromHeader(req);
+    const userId = req.userId; // From authenticate middleware
     const { prompt, productName, keywords } = req.body;
 
     if (!userId) {
