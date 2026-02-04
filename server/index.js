@@ -109,11 +109,11 @@ app.use((req, res, next) => {
 
 // Database connection pool
 export const db = mysql.createPool({
-  host: process.env.DB_HOST || 'mysql://mysql:qvP2wuiZ0qtXcLkcoX1t462aMbchNGHC6Qv63BJSNfDIuP2VfPREet1aBXgEvFLW@o8w4kckgsoo48kgogsg4sc0s:3306/default',
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER || 'mysql',
-  password: process.env.DB_PASSWORD || 'qvP2wuiZ0qtXcLkcoX1t462aMbchNGHC6Qv63BJSNfDIuP2VfPREet1aBXgEvFLW',
-  database: process.env.DB_NAME || 'mysql-database-o8w4ckgso48kgogsg4sc0s',
+  host: process.env.DB_HOST || '127.0.0.1',
+  port: parseInt(process.env.DB_PORT || '3306', 10),
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'agency',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -123,10 +123,24 @@ export const db = mysql.createPool({
 db.getConnection()
   .then(connection => {
     console.log('✅ Database connected successfully');
+    console.log('📊 Connected to:', {
+      host: process.env.DB_HOST || '127.0.0.1',
+      database: process.env.DB_NAME || 'agency',
+      user: process.env.DB_USER || 'root'
+    });
     connection.release();
   })
   .catch(err => {
     console.error('❌ Database connection failed:', err);
+    console.error('❌ Database config used:', {
+      host: process.env.DB_HOST || '127.0.0.1',
+      port: process.env.DB_PORT || 3306,
+      user: process.env.DB_USER || 'root',
+      database: process.env.DB_NAME || 'agency',
+      password: process.env.DB_PASSWORD ? '***SET***' : 'NOT SET'
+    });
+    console.error('❌ Error details:', err.message);
+    console.error('❌ Error code:', err.code);
   });
 
 // Routes
