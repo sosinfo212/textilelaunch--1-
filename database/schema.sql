@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS products (
   sku VARCHAR(100),
   show_sku BOOLEAN DEFAULT FALSE,
   images JSON,
+  videos JSON,
   attributes JSON,
   category VARCHAR(100),
   supplier VARCHAR(100),
