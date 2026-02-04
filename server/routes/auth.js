@@ -97,13 +97,16 @@
       const { password: _, ...userWithoutPassword } = user;
 
       // Set session cookie (session ID)
-      // For HTTP (IP-only) setup: secure must be false, sameSite should be 'lax'
+      // Use environment variables for cookie settings (HTTPS requires secure: true)
+      const cookieSecure = process.env.COOKIE_SECURE === 'true';
+      const cookieSameSite = process.env.COOKIE_SAMESITE || (cookieSecure ? 'none' : 'lax');
+      
       const cookieOptions = {
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         path: '/', // Ensure cookie is available for all paths
-        secure: false, // Must be false for HTTP (IP-only setup)
-        sameSite: 'lax' // Allows cookies to be sent with cross-site requests
+        secure: cookieSecure, // true for HTTPS, false for HTTP
+        sameSite: cookieSameSite // 'none' for cross-site with HTTPS, 'lax' for same-site
       };
       
       // Don't set domain for localhost - browser will handle it correctly

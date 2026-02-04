@@ -48,13 +48,24 @@ let corsOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
 if (process.env.ALLOWED_ORIGINS) {
   // If ALLOWED_ORIGINS is set, use it (comma-separated list)
   corsOrigin = process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim());
-} else if (!process.env.FRONTEND_URL) {
+} else if (process.env.FRONTEND_URL) {
+  // Use FRONTEND_URL if set (supports both http and https)
+  corsOrigin = [
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_URL.replace('https://', 'http://'),
+    process.env.FRONTEND_URL.replace('http://', 'https://')
+  ].filter((url, index, self) => self.indexOf(url) === index); // Remove duplicates
+} else {
   // Default origins if nothing is set
   corsOrigin = [
     'http://localhost:3000',
+    'http://trendycosmetix.com',
+    'https://trendycosmetix.com',
     'http://trendycosmeticx.com',
     'https://trendycosmeticx.com',
     'http://76.13.36.165',
+    'http://www.trendycosmetix.com',
+    'https://www.trendycosmetix.com',
     'http://www.trendycosmeticx.com',
     'https://www.trendycosmeticx.com'
   ];
@@ -73,15 +84,18 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 
 // Session configuration
-// For HTTP (IP-only) setup: secure must be false, sameSite should be 'lax'
+// Use environment variables for cookie settings (HTTPS requires secure: true)
+const cookieSecure = process.env.COOKIE_SECURE === 'true';
+const cookieSameSite = process.env.COOKIE_SAMESITE || (cookieSecure ? 'none' : 'lax');
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'textilelaunch-session-secret-change-in-production',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // Must be false for HTTP (IP-only setup)
+    secure: cookieSecure, // true for HTTPS, false for HTTP
     httpOnly: true,
-    sameSite: 'lax', // Allows cookies to be sent with cross-site requests
+    sameSite: cookieSameSite, // 'none' for cross-site with HTTPS, 'lax' for same-site
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     path: '/' // Ensure cookie is available for all paths
   }
