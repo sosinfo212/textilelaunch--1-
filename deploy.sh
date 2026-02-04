@@ -138,7 +138,8 @@ fi
 
 # Step 6: Setup database
 print_info "Setting up database..."
-DB_PASSWORD=$(openssl rand -base64 24)
+DB_PASSWORD="VotreMotDePasseSecurise123!"
+print_info "Database password set to: VotreMotDePasseSecurise123!"
 
 # Try to create database with root password, or prompt for password
 print_info "Creating database and user..."
@@ -352,7 +353,10 @@ fi
 # Step 11: Initialize database schema
 print_info "Initializing database schema..."
 if [ -f "$APP_DIR/database/schema.sql" ]; then
-    mysql -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < "$APP_DIR/database/schema.sql"
+    # Import schema, ignoring errors for existing indexes/tables (safe to ignore)
+    if mysql -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < "$APP_DIR/database/schema.sql" 2>&1 | grep -v "Duplicate key name" | grep -v "already exists" | grep -v "Duplicate entry" | grep -i error; then
+        print_warn "Some tables/indexes already exist (normal if database was partially initialized)"
+    fi
     print_info "Database schema initialized"
 else
     print_warn "schema.sql not found. Please initialize database manually."

@@ -31,13 +31,12 @@ export const authenticate = async (req, res, next) => {
     let token = null;
     let sessionId = null;
 
-    // Debug: log cookies and session check
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[AUTH] ${req.method} ${req.path}`);
-      console.log(`[AUTH] Cookies object:`, req.cookies);
-      console.log(`[AUTH] Cookie sessionId:`, req.cookies?.sessionId);
-      console.log(`[AUTH] All cookie keys:`, Object.keys(req.cookies || {}));
-    }
+    // Debug: log cookies and session check (always log for debugging)
+    console.log(`[AUTH] ${req.method} ${req.path}`);
+    console.log(`[AUTH] Cookies object:`, req.cookies);
+    console.log(`[AUTH] Cookie sessionId:`, req.cookies?.sessionId);
+    console.log(`[AUTH] All cookie keys:`, Object.keys(req.cookies || {}));
+    console.log(`[AUTH] Cookie header:`, req.headers.cookie);
 
     // Check for session ID in cookie (preferred method - sessions stored in DB)
     if (req.cookies && req.cookies.sessionId) {

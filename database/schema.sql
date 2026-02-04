@@ -92,11 +92,60 @@ CREATE TABLE IF NOT EXISTS sessions (
   INDEX idx_sessions_expires (expires_at)
 );
 
--- Indexes for performance
-CREATE INDEX idx_products_owner ON products(owner_id);
-CREATE INDEX idx_orders_seller ON orders(seller_id);
-CREATE INDEX idx_orders_product ON orders(product_id);
-CREATE INDEX idx_templates_owner ON landing_page_templates(owner_id);
+-- Indexes for performance (using IF NOT EXISTS equivalent - MySQL doesn't support it directly)
+-- Check and create indexes only if they don't exist
+SET @dbname = DATABASE();
+SET @idx_name = 'idx_products_owner';
+SET @sql = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS 
+   WHERE TABLE_SCHEMA = @dbname 
+   AND TABLE_NAME = 'products' 
+   AND INDEX_NAME = @idx_name) > 0,
+  'SELECT ''Index idx_products_owner already exists'' AS result;',
+  'CREATE INDEX idx_products_owner ON products(owner_id);'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @idx_name = 'idx_orders_seller';
+SET @sql = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS 
+   WHERE TABLE_SCHEMA = @dbname 
+   AND TABLE_NAME = 'orders' 
+   AND INDEX_NAME = @idx_name) > 0,
+  'SELECT ''Index idx_orders_seller already exists'' AS result;',
+  'CREATE INDEX idx_orders_seller ON orders(seller_id);'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @idx_name = 'idx_orders_product';
+SET @sql = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS 
+   WHERE TABLE_SCHEMA = @dbname 
+   AND TABLE_NAME = 'orders' 
+   AND INDEX_NAME = @idx_name) > 0,
+  'SELECT ''Index idx_orders_product already exists'' AS result;',
+  'CREATE INDEX idx_orders_product ON orders(product_id);'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @idx_name = 'idx_templates_owner';
+SET @sql = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS 
+   WHERE TABLE_SCHEMA = @dbname 
+   AND TABLE_NAME = 'landing_page_templates' 
+   AND INDEX_NAME = @idx_name) > 0,
+  'SELECT ''Index idx_templates_owner already exists'' AS result;',
+  'CREATE INDEX idx_templates_owner ON landing_page_templates(owner_id);'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Insert default admin user
 INSERT IGNORE INTO users (id, email, password, name, role) 
