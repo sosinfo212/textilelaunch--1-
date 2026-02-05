@@ -1,7 +1,7 @@
 -- Trendy Cosmetix Database Schema
 -- Database: agency
 
-CREATE DATABASE IF NOT EXISTS agency;
+CREATE DATABASE IF NOT EXISTS agency CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE agency;
 
 -- Users Table
@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS products (
   id VARCHAR(191) PRIMARY KEY,
   owner_id VARCHAR(191) NOT NULL,
-  name VARCHAR(191) NOT NULL,
-  description TEXT,
+  name VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  description TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   price DECIMAL(10, 2) NOT NULL,
   regular_price DECIMAL(10, 2),
   currency VARCHAR(10) DEFAULT 'MAD',
@@ -29,13 +29,13 @@ CREATE TABLE IF NOT EXISTS products (
   images JSON,
   videos JSON,
   attributes JSON,
-  category VARCHAR(100),
-  supplier VARCHAR(100),
+  category VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  supplier VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   landing_page_template_id VARCHAR(191),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Orders Table
 CREATE TABLE IF NOT EXISTS orders (
