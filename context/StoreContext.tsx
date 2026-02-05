@@ -382,7 +382,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         const settingsData = {
           shopName: newSettings.shopName,
           logoUrl: newSettings.logoUrl,
-          geminiApiKey: newSettings.geminiApiKey
+          geminiApiKey: newSettings.geminiApiKey,
+          facebookPixelCode: newSettings.facebookPixelCode || ''
         };
         const res = await settingsAPI.update(settingsData);
         const updatedSettings = { ...res.settings, userId: user.id };

@@ -55,6 +55,14 @@ router.put('/', authenticate, async (req, res) => {
     }
 
     const { shopName, logoUrl, geminiApiKey, facebookPixelCode } = req.body;
+    
+    console.log(`[Settings] Update request for userId: ${userId}`);
+    console.log(`[Settings] Received data:`, {
+      shopName: shopName ? 'provided' : 'missing',
+      logoUrl: logoUrl ? 'provided' : 'missing',
+      geminiApiKey: geminiApiKey ? 'provided' : 'missing',
+      facebookPixelCode: facebookPixelCode ? `provided (${facebookPixelCode.length} chars)` : 'missing'
+    });
 
     // Check if settings exist
     const [existing] = await db.execute(
@@ -92,10 +100,14 @@ router.put('/', authenticate, async (req, res) => {
 
       if (updates.length > 0) {
         values.push(userId);
+        console.log(`[Settings] Executing UPDATE with ${updates.length} fields:`, updates);
         await db.execute(
           `UPDATE app_settings SET ${updates.join(', ')} WHERE user_id = ?`,
           values
         );
+        console.log(`[Settings] Update successful for userId: ${userId}`);
+      } else {
+        console.log(`[Settings] No updates to apply for userId: ${userId}`);
       }
     }
 
