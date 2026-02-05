@@ -15,7 +15,6 @@ export const ProductLanding: React.FC = () => {
   const [template, setTemplate] = useState<any>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [facebookPixelCode, setFacebookPixelCode] = useState<string>('');
   
   // Form State
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
@@ -57,12 +56,12 @@ export const ProductLanding: React.FC = () => {
         if (storeProduct) {
           setProduct(storeProduct);
           if (Array.isArray(storeProduct.attributes) && storeProduct.attributes.length > 0) {
-            const initialAttrs: Record<string, string> = {};
+        const initialAttrs: Record<string, string> = {};
             storeProduct.attributes.forEach(attr => {
-              if (attr.options.length > 0) initialAttrs[attr.name] = attr.options[0];
-            });
-            setSelectedAttributes(initialAttrs);
-          }
+            if (attr.options.length > 0) initialAttrs[attr.name] = attr.options[0];
+        });
+        setSelectedAttributes(initialAttrs);
+      }
           setLoading(false);
           return;
         }
@@ -106,66 +105,138 @@ export const ProductLanding: React.FC = () => {
     };
   }, [product]);
 
-  // Load Facebook Pixel code from product owner's settings
+  // Load Facebook Pixel code from product owner's settings and inject it
   useEffect(() => {
-    const loadFacebookPixel = async () => {
-      if (!product?.ownerId) return;
+    const loadAndInjectFacebookPixel = async () => {
+      if (!product?.ownerId) {
+        console.log('No product ownerId found');
+        return;
+      }
+      
+      console.log('Loading Facebook Pixel for ownerId:', product.ownerId);
       
       try {
         const response = await settingsAPI.getByUserId(product.ownerId);
-        if (response.settings?.facebookPixelCode) {
-          setFacebookPixelCode(response.settings.facebookPixelCode);
+        console.log('Settings API response:', response);
+        
+        const pixelCode = response.settings?.facebookPixelCode;
+        
+        if (!pixelCode || pixelCode.trim() === '') {
+          console.log('No Facebook Pixel code found for user:', product.ownerId);
+          return;
         }
+
+        console.log('Facebook Pixel code found, length:', pixelCode.length);
+        console.log('Pixel code preview:', pixelCode.substring(0, 200));
+
+        // Check if Facebook Pixel is already injected (avoid duplicates)
+        // Check by looking for fbq function or facebook pixel script
+        const existingPixel = document.head.querySelector('script[data-facebook-pixel]') || 
+                              document.head.querySelector('script[src*="facebook.net"]') ||
+                              (window as any).fbq;
+        
+        if (existingPixel) {
+          console.log('Facebook Pixel already injected, skipping');
+          return;
+        }
+
+        // Create a temporary container to parse the HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = pixelCode.trim();
+
+        // Find and inject script tags
+        const scripts = tempDiv.querySelectorAll('script');
+        console.log(`Found ${scripts.length} script tags in pixel code`);
+        
+        scripts.forEach((script, index) => {
+          const scriptSrc = script.getAttribute('src') || '';
+          const scriptText = script.textContent || '';
+          
+          console.log(`Processing script ${index + 1}:`, scriptSrc || 'inline script');
+          
+          // Check for duplicate by src or content
+          let isDuplicate = false;
+          if (scriptSrc) {
+            isDuplicate = Array.from(document.head.querySelectorAll('script[src]')).some(
+              existing => existing.getAttribute('src') === scriptSrc
+            );
+          } else if (scriptText) {
+            isDuplicate = Array.from(document.head.querySelectorAll('script')).some(
+              existing => existing.textContent === scriptText
+            );
+          }
+
+          if (!isDuplicate) {
+            const newScript = document.createElement('script');
+            newScript.setAttribute('data-facebook-pixel', 'true');
+            
+            // Copy all attributes from original script
+            Array.from(script.attributes).forEach(attr => {
+              newScript.setAttribute(attr.name, attr.value);
+            });
+            
+            // Set script content
+            if (script.textContent) {
+              newScript.textContent = script.textContent;
+            }
+            
+            // Insert at the beginning of head to ensure it loads early
+            document.head.insertBefore(newScript, document.head.firstChild);
+            console.log(`✅ Facebook Pixel script ${index + 1} injected into head`);
+          } else {
+            console.log(`⚠️ Script ${index + 1} already exists, skipping`);
+          }
+        });
+
+        // Find and inject noscript tags (usually go in body, but we'll check both)
+        const noscripts = tempDiv.querySelectorAll('noscript');
+        console.log(`Found ${noscripts.length} noscript tags in pixel code`);
+        
+        noscripts.forEach((noscript, index) => {
+          const noscriptContent = noscript.innerHTML;
+          
+          // Check for duplicate in head
+          let isDuplicateInHead = Array.from(document.head.querySelectorAll('noscript')).some(
+            existing => existing.innerHTML === noscriptContent
+          );
+          
+          // Check for duplicate in body
+          let isDuplicateInBody = Array.from(document.body.querySelectorAll('noscript')).some(
+            existing => existing.innerHTML === noscriptContent
+          );
+
+          if (!isDuplicateInHead && !isDuplicateInBody) {
+            // Facebook Pixel noscript usually goes in body, but we'll put it in head first
+            // If it contains an img tag, it should go in body
+            if (noscriptContent.includes('<img')) {
+              const newNoscript = document.createElement('noscript');
+              newNoscript.setAttribute('data-facebook-pixel', 'true');
+              newNoscript.innerHTML = noscriptContent;
+              document.body.insertBefore(newNoscript, document.body.firstChild);
+              console.log(`✅ Facebook Pixel noscript ${index + 1} injected into body`);
+            } else {
+              const newNoscript = document.createElement('noscript');
+              newNoscript.setAttribute('data-facebook-pixel', 'true');
+              newNoscript.innerHTML = noscriptContent;
+              document.head.appendChild(newNoscript);
+              console.log(`✅ Facebook Pixel noscript ${index + 1} injected into head`);
+            }
+          } else {
+            console.log(`⚠️ Noscript ${index + 1} already exists, skipping`);
+          }
+        });
+        
+        console.log('✅ Facebook Pixel injection complete');
+
       } catch (err) {
-        console.error('Error loading Facebook Pixel code:', err);
+        console.error('Error loading/injecting Facebook Pixel code:', err);
       }
     };
     
-    loadFacebookPixel();
+    if (product?.ownerId) {
+      loadAndInjectFacebookPixel();
+    }
   }, [product?.ownerId]);
-
-  // Inject Facebook Pixel code in head tag
-  useEffect(() => {
-    if (!facebookPixelCode) return;
-
-    // Create a container div to parse the HTML
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = facebookPixelCode;
-
-    // Find all script and noscript tags
-    const scripts = tempDiv.querySelectorAll('script');
-    const noscripts = tempDiv.querySelectorAll('noscript');
-
-    // Inject scripts
-    scripts.forEach((script) => {
-      const newScript = document.createElement('script');
-      // Copy all attributes
-      Array.from(script.attributes).forEach(attr => {
-        newScript.setAttribute(attr.name, attr.value);
-      });
-      newScript.textContent = script.textContent;
-      document.head.appendChild(newScript);
-    });
-
-    // Inject noscripts
-    noscripts.forEach((noscript) => {
-      const newNoscript = document.createElement('noscript');
-      newNoscript.innerHTML = noscript.innerHTML;
-      document.head.appendChild(newNoscript);
-    });
-
-    // Cleanup: remove injected scripts when component unmounts
-    return () => {
-      // Note: Scripts injected this way are hard to remove, but they're harmless
-      // The cleanup is mainly for noscript tags
-      const injectedNoscripts = document.head.querySelectorAll('noscript');
-      injectedNoscripts.forEach(ns => {
-        if (ns.innerHTML.includes('facebook.com/tr')) {
-          ns.remove();
-        }
-      });
-    };
-  }, [facebookPixelCode]);
 
   // Load template if product has one
   useEffect(() => {
@@ -210,13 +281,13 @@ export const ProductLanding: React.FC = () => {
 
   if (error || !product) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 font-cairo" dir="rtl">
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-gray-900">المنتج غير موجود</h2>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 font-cairo" dir="rtl">
+            <div className="text-center">
+                <h2 className="text-xl font-bold text-gray-900">المنتج غير موجود</h2>
           <p className="text-gray-600 mt-2">{error || 'لم يتم العثور على المنتج'}</p>
           <Link to="/" className="mt-4 inline-block text-brand-600 hover:text-brand-500">العودة للمتجر</Link>
+            </div>
         </div>
-      </div>
     );
   }
 
