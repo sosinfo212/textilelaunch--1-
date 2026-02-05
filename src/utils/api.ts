@@ -213,6 +213,10 @@ export const settingsAPI = {
     return apiRequest<{ settings: any }>('/settings');
   },
   
+  getByUserId: async (userId: string) => {
+    return apiRequest<{ settings: any }>(`/settings/${userId}`);
+  },
+  
   update: async (settings: any) => {
     return apiRequest<{ settings: any }>('/settings', {
       method: 'PUT',

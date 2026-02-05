@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
 import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image } from 'lucide-react';
@@ -13,7 +13,16 @@ export const SettingsPage: React.FC = () => {
     const [shopName, setShopName] = useState(settings.shopName);
     const [logoUrl, setLogoUrl] = useState(settings.logoUrl);
     const [geminiApiKey, setGeminiApiKey] = useState(settings.geminiApiKey);
+    const [facebookPixelCode, setFacebookPixelCode] = useState(settings.facebookPixelCode || '');
     const [saveMessage, setSaveMessage] = useState('');
+
+    // Update form when settings change
+    useEffect(() => {
+        setShopName(settings.shopName);
+        setLogoUrl(settings.logoUrl);
+        setGeminiApiKey(settings.geminiApiKey);
+        setFacebookPixelCode(settings.facebookPixelCode || '');
+    }, [settings]);
 
     // Users Form
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -28,7 +37,8 @@ export const SettingsPage: React.FC = () => {
                     userId: user.id,
                     shopName,
                     logoUrl,
-                    geminiApiKey
+                    geminiApiKey,
+                    facebookPixelCode
                 });
                 setSaveMessage('Paramètres sauvegardés avec succès !');
                 setTimeout(() => setSaveMessage(''), 3000);
@@ -149,6 +159,37 @@ export const SettingsPage: React.FC = () => {
                                 </div>
                                 <p className="mt-2 text-xs text-gray-500">
                                     Nécessaire pour la génération automatique de descriptions.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Code Facebook Pixel</label>
+                                <div className="mt-1">
+                                    <textarea
+                                        value={facebookPixelCode}
+                                        onChange={e => setFacebookPixelCode(e.target.value)}
+                                        rows={6}
+                                        className="focus:ring-brand-500 focus:border-brand-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 font-mono text-xs"
+                                        placeholder="<!-- Facebook Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', 'YOUR_PIXEL_ID');
+fbq('track', 'PageView');
+</script>
+<noscript><img height='1' width='1' style='display:none'
+src='https://www.facebook.com/tr?id=YOUR_PIXEL_ID&ev=PageView&noscript=1'
+/></noscript>"
+                                    />
+                                </div>
+                                <p className="mt-2 text-xs text-gray-500">
+                                    Code Facebook Pixel à injecter dans le &lt;head&gt; des pages de landing page. Sera ajouté automatiquement.
                                 </p>
                             </div>
 

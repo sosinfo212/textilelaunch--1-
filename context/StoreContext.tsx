@@ -47,7 +47,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     userId: '',
     shopName: 'Trendy Cosmetix Store',
     logoUrl: '',
-    geminiApiKey: ''
+    geminiApiKey: '',
+    facebookPixelCode: ''
 };
 
 export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

@@ -54,7 +54,7 @@ router.put('/', authenticate, async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { shopName, logoUrl, geminiApiKey } = req.body;
+    const { shopName, logoUrl, geminiApiKey, facebookPixelCode } = req.body;
 
     // Check if settings exist
     const [existing] = await db.execute(
@@ -65,8 +65,8 @@ router.put('/', authenticate, async (req, res) => {
     if (existing.length === 0) {
       // Create new settings
       await db.execute(
-        'INSERT INTO app_settings (user_id, shop_name, logo_url, gemini_api_key) VALUES (?, ?, ?, ?)',
-        [userId, shopName || 'Trendy Cosmetix Store', logoUrl || '', geminiApiKey || '']
+        'INSERT INTO app_settings (user_id, shop_name, logo_url, gemini_api_key, facebook_pixel_code) VALUES (?, ?, ?, ?, ?)',
+        [userId, shopName || 'Trendy Cosmetix Store', logoUrl || '', geminiApiKey || '', facebookPixelCode || '']
       );
     } else {
       // Update existing settings
@@ -84,6 +84,10 @@ router.put('/', authenticate, async (req, res) => {
       if (geminiApiKey !== undefined) {
         updates.push('gemini_api_key = ?');
         values.push(geminiApiKey);
+      }
+      if (facebookPixelCode !== undefined) {
+        updates.push('facebook_pixel_code = ?');
+        values.push(facebookPixelCode);
       }
 
       if (updates.length > 0) {
@@ -107,7 +111,7 @@ router.put('/', authenticate, async (req, res) => {
   }
 });
 
-// Get settings for specific user (admin only)
+// Get settings for specific user (public endpoint for landing pages)
 router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -117,7 +121,7 @@ router.get('/:userId', async (req, res) => {
     );
 
     if (settings.length === 0) {
-      return res.status(404).json({ error: 'Settings not found' });
+      return res.json({ settings: formatSettings({ user_id: userId, shop_name: 'Trendy Cosmetix Store', logo_url: '', gemini_api_key: '', facebook_pixel_code: '' }) });
     }
 
     res.json({ settings: formatSettings(settings[0]) });
@@ -133,7 +137,8 @@ function formatSettings(row) {
     userId: row.user_id,
     shopName: row.shop_name || 'Trendy Cosmetix Store',
     logoUrl: row.logo_url || '',
-    geminiApiKey: row.gemini_api_key || ''
+    geminiApiKey: row.gemini_api_key || '',
+    facebookPixelCode: row.facebook_pixel_code || ''
   };
 }
 

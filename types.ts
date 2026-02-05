@@ -121,4 +121,5 @@ export interface AppSettings {
   shopName: string;
   logoUrl: string;
   geminiApiKey: string;
+  facebookPixelCode?: string;
 }

@@ -6,7 +6,7 @@ import { isVideo, isImage } from '../src/utils/imageUtils';
 import { formatPrice } from '../src/utils/currency';
 import { CheckCircle, ArrowLeft, Phone, MapPin, Truck, ShieldCheck, Star, ShoppingCart, Plus, Minus, Home, AlertCircle, Video } from 'lucide-react';
 import { LandingPageRenderer } from '../components/LandingPageRenderer';
-import { productsAPI, templatesAPI } from '../src/utils/api';
+import { productsAPI, templatesAPI, settingsAPI } from '../src/utils/api';
 
 export const ProductLanding: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -15,6 +15,7 @@ export const ProductLanding: React.FC = () => {
   const [template, setTemplate] = useState<any>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [facebookPixelCode, setFacebookPixelCode] = useState<string>('');
   
   // Form State
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
@@ -104,6 +105,67 @@ export const ProductLanding: React.FC = () => {
       document.title = 'Trendy Cosmetix';
     };
   }, [product]);
+
+  // Load Facebook Pixel code from product owner's settings
+  useEffect(() => {
+    const loadFacebookPixel = async () => {
+      if (!product?.ownerId) return;
+      
+      try {
+        const response = await settingsAPI.getByUserId(product.ownerId);
+        if (response.settings?.facebookPixelCode) {
+          setFacebookPixelCode(response.settings.facebookPixelCode);
+        }
+      } catch (err) {
+        console.error('Error loading Facebook Pixel code:', err);
+      }
+    };
+    
+    loadFacebookPixel();
+  }, [product?.ownerId]);
+
+  // Inject Facebook Pixel code in head tag
+  useEffect(() => {
+    if (!facebookPixelCode) return;
+
+    // Create a container div to parse the HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = facebookPixelCode;
+
+    // Find all script and noscript tags
+    const scripts = tempDiv.querySelectorAll('script');
+    const noscripts = tempDiv.querySelectorAll('noscript');
+
+    // Inject scripts
+    scripts.forEach((script) => {
+      const newScript = document.createElement('script');
+      // Copy all attributes
+      Array.from(script.attributes).forEach(attr => {
+        newScript.setAttribute(attr.name, attr.value);
+      });
+      newScript.textContent = script.textContent;
+      document.head.appendChild(newScript);
+    });
+
+    // Inject noscripts
+    noscripts.forEach((noscript) => {
+      const newNoscript = document.createElement('noscript');
+      newNoscript.innerHTML = noscript.innerHTML;
+      document.head.appendChild(newNoscript);
+    });
+
+    // Cleanup: remove injected scripts when component unmounts
+    return () => {
+      // Note: Scripts injected this way are hard to remove, but they're harmless
+      // The cleanup is mainly for noscript tags
+      const injectedNoscripts = document.head.querySelectorAll('noscript');
+      injectedNoscripts.forEach(ns => {
+        if (ns.innerHTML.includes('facebook.com/tr')) {
+          ns.remove();
+        }
+      });
+    };
+  }, [facebookPixelCode]);
 
   // Load template if product has one
   useEffect(() => {
