@@ -114,6 +114,8 @@ router.post('/', async (req, res) => {
     res.status(201).json({ order: formatOrder(orders[0]) });
   } catch (error) {
     console.error('Create order error:', error);
+    console.error('Error details:', error.message, error.code, error.sqlState);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

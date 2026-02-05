@@ -18,8 +18,9 @@ router.get('/', authenticate, async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
+    // Select specific columns to avoid issues if facebook_pixel_code doesn't exist yet
     const [settings] = await db.execute(
-      'SELECT * FROM app_settings WHERE user_id = ?',
+      'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code FROM app_settings WHERE user_id = ?',
       [userId]
     );
 
@@ -31,7 +32,7 @@ router.get('/', authenticate, async (req, res) => {
       );
       
       const [newSettings] = await db.execute(
-        'SELECT * FROM app_settings WHERE user_id = ?',
+        'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code FROM app_settings WHERE user_id = ?',
         [userId]
       );
       
@@ -41,6 +42,25 @@ router.get('/', authenticate, async (req, res) => {
     res.json({ settings: formatSettings(settings[0]) });
   } catch (error) {
     console.error('Get settings error:', error);
+    console.error('Error details:', error.message, error.code, error.sqlState);
+    
+    // If column doesn't exist, try without it
+    if (error.code === 'ER_BAD_FIELD_ERROR' && error.message.includes('facebook_pixel_code')) {
+      console.log('[Settings] facebook_pixel_code column missing, trying without it');
+      try {
+        const [settings] = await db.execute(
+          'SELECT user_id, shop_name, logo_url, gemini_api_key FROM app_settings WHERE user_id = ?',
+          [userId]
+        );
+        if (settings.length > 0) {
+          const formatted = formatSettings({ ...settings[0], facebook_pixel_code: '' });
+          return res.json({ settings: formatted });
+        }
+      } catch (retryError) {
+        console.error('Retry query also failed:', retryError);
+      }
+    }
+    
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -129,8 +149,9 @@ router.get('/:userId', async (req, res) => {
     const { userId } = req.params;
     console.log(`[Settings] Fetching public settings for userId: ${userId}`);
     
+    // Select specific columns to avoid issues if facebook_pixel_code doesn't exist yet
     const [settings] = await db.execute(
-      'SELECT * FROM app_settings WHERE user_id = ?',
+      'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code FROM app_settings WHERE user_id = ?',
       [userId]
     );
 
@@ -145,6 +166,25 @@ router.get('/:userId', async (req, res) => {
     res.json({ settings: formatted });
   } catch (error) {
     console.error('Get user settings error:', error);
+    console.error('Error details:', error.message, error.code, error.sqlState);
+    
+    // If column doesn't exist, return settings without facebook_pixel_code
+    if (error.code === 'ER_BAD_FIELD_ERROR' && error.message.includes('facebook_pixel_code')) {
+      console.log('[Settings] facebook_pixel_code column missing, returning settings without it');
+      try {
+        const [settings] = await db.execute(
+          'SELECT user_id, shop_name, logo_url, gemini_api_key FROM app_settings WHERE user_id = ?',
+          [userId]
+        );
+        if (settings.length > 0) {
+          const formatted = formatSettings({ ...settings[0], facebook_pixel_code: '' });
+          return res.json({ settings: formatted });
+        }
+      } catch (retryError) {
+        console.error('Retry query also failed:', retryError);
+      }
+    }
+    
     res.status(500).json({ error: 'Internal server error' });
   }
 });
