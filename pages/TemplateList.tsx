@@ -62,22 +62,15 @@ export const TemplateList: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Modèles de Landing Page</h1>
-          <p className="mt-1 text-sm text-gray-500">Gérez vos designs ou choisissez parmi notre bibliothèque de 30+ modèles.</p>
+          <p className="mt-1 text-sm text-gray-500">Gérez vos designs personnalisés.</p>
         </div>
         <div className="flex gap-2">
-            <button
-                onClick={() => setIsGalleryOpen(true)}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-            >
-                <LayoutTemplate className="mr-2 h-4 w-4 text-brand-600" />
-                Bibliothèque ({TEMPLATE_LIBRARY.length})
-            </button>
             <Link
             to="/builder/new"
             className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-600 hover:bg-brand-700 transition-colors"
             >
             <Plus className="mr-2 h-4 w-4" />
-            Créer vide
+            Créer un modèle
             </Link>
         </div>
       </div>
@@ -183,6 +176,21 @@ export const TemplateList: React.FC = () => {
 
             {/* Gallery Grid */}
             <div className="flex-1 overflow-y-auto p-6 bg-gray-100">
+                {filteredLibrary.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center py-16">
+                        <LayoutTemplate className="h-16 w-16 text-gray-300 mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-700 mb-2">Aucun modèle disponible</h3>
+                        <p className="text-sm text-gray-500 mb-6">Créez vos propres modèles personnalisés.</p>
+                        <Link
+                            to="/builder/new"
+                            onClick={() => setIsGalleryOpen(false)}
+                            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-600 hover:bg-brand-700 transition-colors"
+                        >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Créer un modèle
+                        </Link>
+                    </div>
+                ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredLibrary.map(preset => (
                         <div 
@@ -251,6 +259,7 @@ export const TemplateList: React.FC = () => {
                         </div>
                     ))}
                 </div>
+                )}
             </div>
           </div>
         </div>
