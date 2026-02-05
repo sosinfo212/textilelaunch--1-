@@ -115,16 +115,22 @@ router.put('/', authenticate, async (req, res) => {
 router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    console.log(`[Settings] Fetching public settings for userId: ${userId}`);
+    
     const [settings] = await db.execute(
       'SELECT * FROM app_settings WHERE user_id = ?',
       [userId]
     );
 
     if (settings.length === 0) {
+      console.log(`[Settings] No settings found for userId: ${userId}, returning defaults`);
       return res.json({ settings: formatSettings({ user_id: userId, shop_name: 'Trendy Cosmetix Store', logo_url: '', gemini_api_key: '', facebook_pixel_code: '' }) });
     }
 
-    res.json({ settings: formatSettings(settings[0]) });
+    const formatted = formatSettings(settings[0]);
+    console.log(`[Settings] Settings found for userId: ${userId}, facebookPixelCode length: ${formatted.facebookPixelCode?.length || 0}`);
+    
+    res.json({ settings: formatted });
   } catch (error) {
     console.error('Get user settings error:', error);
     res.status(500).json({ error: 'Internal server error' });

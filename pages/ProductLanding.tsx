@@ -118,11 +118,15 @@ export const ProductLanding: React.FC = () => {
       try {
         const response = await settingsAPI.getByUserId(product.ownerId);
         console.log('Settings API response:', response);
+        console.log('Settings object:', response.settings);
+        console.log('Facebook Pixel Code value:', response.settings?.facebookPixelCode);
+        console.log('Facebook Pixel Code type:', typeof response.settings?.facebookPixelCode);
         
         const pixelCode = response.settings?.facebookPixelCode;
         
-        if (!pixelCode || pixelCode.trim() === '') {
-          console.log('No Facebook Pixel code found for user:', product.ownerId);
+        if (!pixelCode || (typeof pixelCode === 'string' && pixelCode.trim() === '')) {
+          console.log('⚠️ No Facebook Pixel code found for user:', product.ownerId);
+          console.log('💡 To add Facebook Pixel code: Go to Settings page and paste your Facebook Pixel code in the "Code Facebook Pixel" field.');
           return;
         }
 
