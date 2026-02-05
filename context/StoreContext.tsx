@@ -257,6 +257,12 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       if (newOrder.sellerId === user?.id) {
         setOrders([newOrder, ...orders]);
       }
+      
+      // Track Meta Pixel Lead event after successful order submission
+      // apiRequest only returns if response.ok === true, so this is safe
+      if (typeof window !== 'undefined' && (window as any).fbq) {
+        (window as any).fbq('track', 'Lead');
+      }
     } catch (error) {
       console.error('Error adding order:', error);
       throw error;
