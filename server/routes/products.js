@@ -99,7 +99,8 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Name and price are required' });
     }
 
-    const id = `prod_${uuidv4()}`;
+    // Generate simple product ID: Prod_timestamp (base36 for shorter URL)
+    const id = `Prod_${Date.now().toString(36)}`;
     const imagesJson = JSON.stringify(images || []);
     const videosJson = JSON.stringify(videos || []);
     const attributesJson = JSON.stringify(attributes || []);
