@@ -475,7 +475,7 @@ export const ProductLanding: React.FC = () => {
                    <img 
                      src={media[currentMediaIndex]?.src || product.images[0]} 
                      alt={product.name} 
-                     className="w-full h-full object-center object-cover"
+                     className="w-full h-full object-center object-contain"
                      onError={(e) => {
                        const target = e.target as HTMLImageElement;
                        if (target.src.startsWith('blob:')) {
@@ -521,7 +521,7 @@ export const ProductLanding: React.FC = () => {
                                     <img 
                                       src={item.src} 
                                       alt="" 
-                                      className="w-full h-full object-cover"
+                                      className="w-full h-full object-contain"
                                       onError={(e) => {
                                         const target = e.target as HTMLImageElement;
                                         if (target.src.startsWith('blob:')) {
