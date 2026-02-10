@@ -122,4 +122,5 @@ export interface AppSettings {
   logoUrl: string;
   geminiApiKey: string;
   facebookPixelCode?: string;
+  tiktokPixelCode?: string;
 }

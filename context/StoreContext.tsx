@@ -48,7 +48,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     shopName: 'Trendy Cosmetix Store',
     logoUrl: '',
     geminiApiKey: '',
-    facebookPixelCode: ''
+    facebookPixelCode: '',
+    tiktokPixelCode: ''
 };
 
 export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -389,7 +390,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           shopName: newSettings.shopName,
           logoUrl: newSettings.logoUrl,
           geminiApiKey: newSettings.geminiApiKey,
-          facebookPixelCode: newSettings.facebookPixelCode || ''
+          facebookPixelCode: newSettings.facebookPixelCode || '',
+          tiktokPixelCode: newSettings.tiktokPixelCode || ''
         };
         const res = await settingsAPI.update(settingsData);
         const updatedSettings = { ...res.settings, userId: user.id };

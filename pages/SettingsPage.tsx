@@ -14,6 +14,7 @@ export const SettingsPage: React.FC = () => {
     const [logoUrl, setLogoUrl] = useState(settings.logoUrl);
     const [geminiApiKey, setGeminiApiKey] = useState(settings.geminiApiKey);
     const [facebookPixelCode, setFacebookPixelCode] = useState(settings.facebookPixelCode || '');
+    const [tiktokPixelCode, setTiktokPixelCode] = useState(settings.tiktokPixelCode || '');
     const [saveMessage, setSaveMessage] = useState('');
 
     // Update form when settings change
@@ -22,6 +23,7 @@ export const SettingsPage: React.FC = () => {
         setLogoUrl(settings.logoUrl);
         setGeminiApiKey(settings.geminiApiKey);
         setFacebookPixelCode(settings.facebookPixelCode || '');
+        setTiktokPixelCode(settings.tiktokPixelCode || '');
     }, [settings]);
 
     // Users Form
@@ -38,7 +40,8 @@ export const SettingsPage: React.FC = () => {
                     shopName,
                     logoUrl,
                     geminiApiKey,
-                    facebookPixelCode
+                    facebookPixelCode,
+                    tiktokPixelCode
                 });
                 setSaveMessage('Paramètres sauvegardés avec succès !');
                 setTimeout(() => setSaveMessage(''), 3000);
@@ -190,6 +193,22 @@ src='https://www.facebook.com/tr?id=YOUR_PIXEL_ID&ev=PageView&noscript=1'
                                 </div>
                                 <p className="mt-2 text-xs text-gray-500">
                                     Code Facebook Pixel à injecter dans le &lt;head&gt; des pages de landing page. Sera ajouté automatiquement.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Code TikTok Pixel</label>
+                                <div className="mt-1">
+                                    <textarea
+                                        value={tiktokPixelCode}
+                                        onChange={e => setTiktokPixelCode(e.target.value)}
+                                        rows={6}
+                                        className="focus:ring-brand-500 focus:border-brand-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 font-mono text-xs"
+                                        placeholder={'Collez votre code TikTok Pixel (script + noscript) ici'}
+                                    />
+                                </div>
+                                <p className="mt-2 text-xs text-gray-500">
+                                    Code TikTok Pixel à injecter dans le &lt;head&gt; des pages de landing page. Sera ajouté automatiquement.
                                 </p>
                             </div>
 

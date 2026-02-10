@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
   logo_url TEXT,
   gemini_api_key TEXT,
   facebook_pixel_code TEXT,
+  tiktok_pixel_code TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

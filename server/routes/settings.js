@@ -18,9 +18,9 @@ router.get('/', authenticate, async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Select specific columns to avoid issues if facebook_pixel_code doesn't exist yet
+    // Select specific columns to avoid issues if pixel columns don't exist yet
     const [settings] = await db.execute(
-      'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code FROM app_settings WHERE user_id = ?',
+      'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code, COALESCE(tiktok_pixel_code, "") as tiktok_pixel_code FROM app_settings WHERE user_id = ?',
       [userId]
     );
 
@@ -32,7 +32,7 @@ router.get('/', authenticate, async (req, res) => {
       );
       
       const [newSettings] = await db.execute(
-        'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code FROM app_settings WHERE user_id = ?',
+        'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code, COALESCE(tiktok_pixel_code, "") as tiktok_pixel_code FROM app_settings WHERE user_id = ?',
         [userId]
       );
       
@@ -45,15 +45,15 @@ router.get('/', authenticate, async (req, res) => {
     console.error('Error details:', error.message, error.code, error.sqlState);
     
     // If column doesn't exist, try without it
-    if (error.code === 'ER_BAD_FIELD_ERROR' && error.message.includes('facebook_pixel_code')) {
-      console.log('[Settings] facebook_pixel_code column missing, trying without it');
+    if (error.code === 'ER_BAD_FIELD_ERROR' && (error.message.includes('facebook_pixel_code') || error.message.includes('tiktok_pixel_code'))) {
+      console.log('[Settings] pixel column missing, trying without it');
       try {
         const [settings] = await db.execute(
           'SELECT user_id, shop_name, logo_url, gemini_api_key FROM app_settings WHERE user_id = ?',
           [userId]
         );
         if (settings.length > 0) {
-          const formatted = formatSettings({ ...settings[0], facebook_pixel_code: '' });
+          const formatted = formatSettings({ ...settings[0], facebook_pixel_code: '', tiktok_pixel_code: '' });
           return res.json({ settings: formatted });
         }
       } catch (retryError) {
@@ -74,14 +74,15 @@ router.put('/', authenticate, async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { shopName, logoUrl, geminiApiKey, facebookPixelCode } = req.body;
+    const { shopName, logoUrl, geminiApiKey, facebookPixelCode, tiktokPixelCode } = req.body;
     
     console.log(`[Settings] Update request for userId: ${userId}`);
     console.log(`[Settings] Received data:`, {
       shopName: shopName ? 'provided' : 'missing',
       logoUrl: logoUrl ? 'provided' : 'missing',
       geminiApiKey: geminiApiKey ? 'provided' : 'missing',
-      facebookPixelCode: facebookPixelCode ? `provided (${facebookPixelCode.length} chars)` : 'missing'
+      facebookPixelCode: facebookPixelCode ? `provided (${facebookPixelCode.length} chars)` : 'missing',
+      tiktokPixelCode: tiktokPixelCode ? `provided (${tiktokPixelCode.length} chars)` : 'missing'
     });
 
     // Check if settings exist
@@ -93,8 +94,8 @@ router.put('/', authenticate, async (req, res) => {
     if (existing.length === 0) {
       // Create new settings
       await db.execute(
-        'INSERT INTO app_settings (user_id, shop_name, logo_url, gemini_api_key, facebook_pixel_code) VALUES (?, ?, ?, ?, ?)',
-        [userId, shopName || 'Trendy Cosmetix Store', logoUrl || '', geminiApiKey || '', facebookPixelCode || '']
+        'INSERT INTO app_settings (user_id, shop_name, logo_url, gemini_api_key, facebook_pixel_code, tiktok_pixel_code) VALUES (?, ?, ?, ?, ?, ?)',
+        [userId, shopName || 'Trendy Cosmetix Store', logoUrl || '', geminiApiKey || '', facebookPixelCode || '', tiktokPixelCode || '']
       );
     } else {
       // Update existing settings
@@ -116,6 +117,10 @@ router.put('/', authenticate, async (req, res) => {
       if (facebookPixelCode !== undefined) {
         updates.push('facebook_pixel_code = ?');
         values.push(facebookPixelCode);
+      }
+      if (tiktokPixelCode !== undefined) {
+        updates.push('tiktok_pixel_code = ?');
+        values.push(tiktokPixelCode);
       }
 
       if (updates.length > 0) {
@@ -149,35 +154,35 @@ router.get('/:userId', async (req, res) => {
     const { userId } = req.params;
     console.log(`[Settings] Fetching public settings for userId: ${userId}`);
     
-    // Select specific columns to avoid issues if facebook_pixel_code doesn't exist yet
+    // Select specific columns to avoid issues if pixel columns don't exist yet
     const [settings] = await db.execute(
-      'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code FROM app_settings WHERE user_id = ?',
+      'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code, COALESCE(tiktok_pixel_code, "") as tiktok_pixel_code FROM app_settings WHERE user_id = ?',
       [userId]
     );
 
     if (settings.length === 0) {
       console.log(`[Settings] No settings found for userId: ${userId}, returning defaults`);
-      return res.json({ settings: formatSettings({ user_id: userId, shop_name: 'Trendy Cosmetix Store', logo_url: '', gemini_api_key: '', facebook_pixel_code: '' }) });
+      return res.json({ settings: formatSettings({ user_id: userId, shop_name: 'Trendy Cosmetix Store', logo_url: '', gemini_api_key: '', facebook_pixel_code: '', tiktok_pixel_code: '' }) });
     }
 
     const formatted = formatSettings(settings[0]);
-    console.log(`[Settings] Settings found for userId: ${userId}, facebookPixelCode length: ${formatted.facebookPixelCode?.length || 0}`);
+    console.log(`[Settings] Settings found for userId: ${userId}, facebookPixelCode length: ${formatted.facebookPixelCode?.length || 0}, tiktokPixelCode length: ${formatted.tiktokPixelCode?.length || 0}`);
     
     res.json({ settings: formatted });
   } catch (error) {
     console.error('Get user settings error:', error);
     console.error('Error details:', error.message, error.code, error.sqlState);
     
-    // If column doesn't exist, return settings without facebook_pixel_code
-    if (error.code === 'ER_BAD_FIELD_ERROR' && error.message.includes('facebook_pixel_code')) {
-      console.log('[Settings] facebook_pixel_code column missing, returning settings without it');
+    // If column doesn't exist, return settings without pixel columns
+    if (error.code === 'ER_BAD_FIELD_ERROR' && (error.message.includes('facebook_pixel_code') || error.message.includes('tiktok_pixel_code'))) {
+      console.log('[Settings] pixel column missing, returning settings without it');
       try {
         const [settings] = await db.execute(
           'SELECT user_id, shop_name, logo_url, gemini_api_key FROM app_settings WHERE user_id = ?',
           [userId]
         );
         if (settings.length > 0) {
-          const formatted = formatSettings({ ...settings[0], facebook_pixel_code: '' });
+          const formatted = formatSettings({ ...settings[0], facebook_pixel_code: '', tiktok_pixel_code: '' });
           return res.json({ settings: formatted });
         }
       } catch (retryError) {
@@ -196,7 +201,8 @@ function formatSettings(row) {
     shopName: row.shop_name || 'Trendy Cosmetix Store',
     logoUrl: row.logo_url || '',
     geminiApiKey: row.gemini_api_key || '',
-    facebookPixelCode: row.facebook_pixel_code || ''
+    facebookPixelCode: row.facebook_pixel_code || '',
+    tiktokPixelCode: row.tiktok_pixel_code || ''
   };
 }
 

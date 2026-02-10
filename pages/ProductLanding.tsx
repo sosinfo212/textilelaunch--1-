@@ -242,6 +242,60 @@ export const ProductLanding: React.FC = () => {
     }
   }, [product?.ownerId]);
 
+  // Load TikTok Pixel code from product owner's settings and inject it
+  useEffect(() => {
+    const loadAndInjectTiktokPixel = async () => {
+      if (!product?.ownerId) return;
+      try {
+        const response = await settingsAPI.getByUserId(product.ownerId);
+        const pixelCode = response.settings?.tiktokPixelCode;
+        if (!pixelCode || (typeof pixelCode === 'string' && pixelCode.trim() === '')) return;
+
+        const existingPixel = document.head.querySelector('script[data-tiktok-pixel]') ||
+          document.head.querySelector('script[src*="analytics.tiktok.com"]') ||
+          (window as any).ttq;
+        if (existingPixel) return;
+
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = pixelCode.trim();
+
+        tempDiv.querySelectorAll('script').forEach((script) => {
+          const scriptSrc = script.getAttribute('src') || '';
+          const scriptText = script.textContent || '';
+          const isDuplicate = scriptSrc
+            ? Array.from(document.head.querySelectorAll('script[src]')).some((s) => s.getAttribute('src') === scriptSrc)
+            : Array.from(document.head.querySelectorAll('script')).some((s) => s.textContent === scriptText);
+          if (!isDuplicate) {
+            const newScript = document.createElement('script');
+            newScript.setAttribute('data-tiktok-pixel', 'true');
+            Array.from(script.attributes).forEach((attr) => newScript.setAttribute(attr.name, attr.value));
+            if (script.textContent) newScript.textContent = script.textContent;
+            document.head.insertBefore(newScript, document.head.firstChild);
+          }
+        });
+
+        tempDiv.querySelectorAll('noscript').forEach((noscript) => {
+          const content = noscript.innerHTML;
+          const exists = Array.from(document.head.querySelectorAll('noscript')).some((n) => n.innerHTML === content) ||
+            Array.from(document.body.querySelectorAll('noscript')).some((n) => n.innerHTML === content);
+          if (!exists) {
+            const newNoscript = document.createElement('noscript');
+            newNoscript.setAttribute('data-tiktok-pixel', 'true');
+            newNoscript.innerHTML = content;
+            if (content.includes('<img')) {
+              document.body.insertBefore(newNoscript, document.body.firstChild);
+            } else {
+              document.head.appendChild(newNoscript);
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Error loading/injecting TikTok Pixel code:', err);
+      }
+    };
+    if (product?.ownerId) loadAndInjectTiktokPixel();
+  }, [product?.ownerId]);
+
   // Load template if product has one
   useEffect(() => {
     const loadTemplate = async () => {
