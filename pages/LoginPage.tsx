@@ -4,8 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { ShoppingBag, Lock, Mail, Loader2, AlertCircle } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('admin@textile.com');
-  const [password, setPassword] = useState('admin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -71,7 +71,7 @@ export const LoginPage: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="focus:ring-brand-500 focus:border-brand-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2"
-                  placeholder="admin@textile.com"
+                  placeholder="votre@email.com"
                 />
               </div>
             </div>
@@ -115,24 +115,6 @@ export const LoginPage: React.FC = () => {
               </button>
             </div>
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  Compte démo
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 gap-3 text-center text-xs text-gray-500">
-                <p>Email: <strong>admin@textile.com</strong></p>
-                <p>Password: <strong>admin</strong></p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
