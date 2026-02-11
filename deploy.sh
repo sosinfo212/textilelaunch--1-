@@ -180,8 +180,14 @@ server {
         proxy_connect_timeout 75s;
     }
     
-    # Serve static files
+    # Cache static assets (JS, CSS, fonts) - improves repeat load
+    location ~* ^/assets/.*\\.(js|css|woff2?|ico|png|jpg|jpeg|gif|webp|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files \$uri =404;
+    }
     location / {
+        add_header Cache-Control "no-cache";
         try_files \$uri \$uri/ /index.html;
     }
 }
@@ -240,8 +246,14 @@ server {
         proxy_connect_timeout 75s;
     }
     
-    # Serve static files (SPA routing support)
+    # Cache static assets (JS, CSS, fonts) - improves repeat load
+    location ~* ^/assets/.*\\.(js|css|woff2?|ico|png|jpg|jpeg|gif|webp|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files \$uri =404;
+    }
     location / {
+        add_header Cache-Control "no-cache";
         try_files \$uri \$uri/ /index.html;
     }
 }

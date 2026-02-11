@@ -105,58 +105,38 @@ export const ProductLanding: React.FC = () => {
     };
   }, [product]);
 
-  // Load Facebook Pixel code from product owner's settings and inject it
+  // Load Facebook Pixel after first paint to avoid blocking LCP (deferred)
   useEffect(() => {
-    const loadAndInjectFacebookPixel = async () => {
-      if (!product?.ownerId) {
-        console.log('No product ownerId found');
-        return;
+    if (!product?.ownerId) return;
+
+    const schedule = (fn: () => void) => {
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(fn, { timeout: 2500 });
+      } else {
+        setTimeout(fn, 500);
       }
-      
-      console.log('Loading Facebook Pixel for ownerId:', product.ownerId);
-      
+    };
+
+    const loadAndInjectFacebookPixel = async () => {
       try {
         const response = await settingsAPI.getByUserId(product.ownerId);
-        console.log('Settings API response:', response);
-        console.log('Settings object:', response.settings);
-        console.log('Facebook Pixel Code value:', response.settings?.facebookPixelCode);
-        console.log('Facebook Pixel Code type:', typeof response.settings?.facebookPixelCode);
-        
         const pixelCode = response.settings?.facebookPixelCode;
-        
-        if (!pixelCode || (typeof pixelCode === 'string' && pixelCode.trim() === '')) {
-          console.log('⚠️ No Facebook Pixel code found for user:', product.ownerId);
-          console.log('💡 To add Facebook Pixel code: Go to Settings page and paste your Facebook Pixel code in the "Code Facebook Pixel" field.');
-          return;
-        }
-
-        console.log('Facebook Pixel code found, length:', pixelCode.length);
-        console.log('Pixel code preview:', pixelCode.substring(0, 200));
+        if (!pixelCode || (typeof pixelCode === 'string' && pixelCode.trim() === '')) return;
 
         // Check if Facebook Pixel is already injected (avoid duplicates)
         // Check by looking for fbq function or facebook pixel script
         const existingPixel = document.head.querySelector('script[data-facebook-pixel]') || 
                               document.head.querySelector('script[src*="facebook.net"]') ||
                               (window as any).fbq;
-        
-        if (existingPixel) {
-          console.log('Facebook Pixel already injected, skipping');
-          return;
-        }
+        if (existingPixel) return;
 
-        // Create a temporary container to parse the HTML
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = pixelCode.trim();
-
-        // Find and inject script tags
         const scripts = tempDiv.querySelectorAll('script');
-        console.log(`Found ${scripts.length} script tags in pixel code`);
         
-        scripts.forEach((script, index) => {
+        scripts.forEach((script) => {
           const scriptSrc = script.getAttribute('src') || '';
           const scriptText = script.textContent || '';
-          
-          console.log(`Processing script ${index + 1}:`, scriptSrc || 'inline script');
           
           // Check for duplicate by src or content
           let isDuplicate = false;
@@ -184,19 +164,12 @@ export const ProductLanding: React.FC = () => {
               newScript.textContent = script.textContent;
             }
             
-            // Insert at the beginning of head to ensure it loads early
-            document.head.insertBefore(newScript, document.head.firstChild);
-            console.log(`✅ Facebook Pixel script ${index + 1} injected into head`);
-          } else {
-            console.log(`⚠️ Script ${index + 1} already exists, skipping`);
+            document.head.appendChild(newScript);
           }
         });
 
-        // Find and inject noscript tags (usually go in body, but we'll check both)
         const noscripts = tempDiv.querySelectorAll('noscript');
-        console.log(`Found ${noscripts.length} noscript tags in pixel code`);
-        
-        noscripts.forEach((noscript, index) => {
+        noscripts.forEach((noscript) => {
           const noscriptContent = noscript.innerHTML;
           
           // Check for duplicate in head
@@ -217,35 +190,35 @@ export const ProductLanding: React.FC = () => {
               newNoscript.setAttribute('data-facebook-pixel', 'true');
               newNoscript.innerHTML = noscriptContent;
               document.body.insertBefore(newNoscript, document.body.firstChild);
-              console.log(`✅ Facebook Pixel noscript ${index + 1} injected into body`);
             } else {
               const newNoscript = document.createElement('noscript');
               newNoscript.setAttribute('data-facebook-pixel', 'true');
               newNoscript.innerHTML = noscriptContent;
               document.head.appendChild(newNoscript);
-              console.log(`✅ Facebook Pixel noscript ${index + 1} injected into head`);
             }
-          } else {
-            console.log(`⚠️ Noscript ${index + 1} already exists, skipping`);
           }
         });
-        
-        console.log('✅ Facebook Pixel injection complete');
-
       } catch (err) {
         console.error('Error loading/injecting Facebook Pixel code:', err);
       }
     };
-    
-    if (product?.ownerId) {
-      loadAndInjectFacebookPixel();
-    }
+
+    schedule(loadAndInjectFacebookPixel);
   }, [product?.ownerId]);
 
-  // Load TikTok Pixel code from product owner's settings and inject it
+  // Load TikTok Pixel after first paint (deferred, same as Facebook)
   useEffect(() => {
+    if (!product?.ownerId) return;
+
+    const schedule = (fn: () => void) => {
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(fn, { timeout: 2500 });
+      } else {
+        setTimeout(fn, 500);
+      }
+    };
+
     const loadAndInjectTiktokPixel = async () => {
-      if (!product?.ownerId) return;
       try {
         const response = await settingsAPI.getByUserId(product.ownerId);
         const pixelCode = response.settings?.tiktokPixelCode;
@@ -270,7 +243,7 @@ export const ProductLanding: React.FC = () => {
             newScript.setAttribute('data-tiktok-pixel', 'true');
             Array.from(script.attributes).forEach((attr) => newScript.setAttribute(attr.name, attr.value));
             if (script.textContent) newScript.textContent = script.textContent;
-            document.head.insertBefore(newScript, document.head.firstChild);
+            document.head.appendChild(newScript);
           }
         });
 
@@ -293,7 +266,7 @@ export const ProductLanding: React.FC = () => {
         console.error('Error loading/injecting TikTok Pixel code:', err);
       }
     };
-    if (product?.ownerId) loadAndInjectTiktokPixel();
+    schedule(loadAndInjectTiktokPixel);
   }, [product?.ownerId]);
 
   // Load template if product has one
@@ -530,6 +503,8 @@ export const ProductLanding: React.FC = () => {
                      src={media[currentMediaIndex]?.src || product.images[0]} 
                      alt={product.name} 
                      className="w-full h-full object-center object-contain"
+                     fetchPriority="high"
+                     decoding="async"
                      onError={(e) => {
                        const target = e.target as HTMLImageElement;
                        if (target.src.startsWith('blob:')) {
@@ -576,6 +551,8 @@ export const ProductLanding: React.FC = () => {
                                       src={item.src} 
                                       alt="" 
                                       className="w-full h-full object-contain"
+                                      loading="lazy"
+                                      decoding="async"
                                       onError={(e) => {
                                         const target = e.target as HTMLImageElement;
                                         if (target.src.startsWith('blob:')) {

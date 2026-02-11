@@ -33,3 +33,5 @@ systemctl restart ${SERVICE_NAME}
 
 echo "✅ Server updated and restarted."
 echo "Check service status: systemctl status ${SERVICE_NAME}"
+echo ""
+echo "To add Nginx cache headers (one-time, if not done yet): sudo bash ${DEPLOY_PATH}/update-nginx-cache.sh"
