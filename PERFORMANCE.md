@@ -26,6 +26,11 @@
 ### 7. **Caching**
 - Nginx serves `/assets/*` with long-lived cache (`Cache-Control: public, immutable`, 1 year). HTML uses `no-cache` so users always get the latest entry file.
 
+### 8. **First network request (document latency)**
+- **Text compression:** Nginx has `gzip` enabled for HTML, JS, CSS, JSON, XML so the document and assets are smaller and transfer faster.
+- **Fewer redirects:** Only one redirect is used (HTTP → HTTPS). Both `trendycosmetix.com` and `www.trendycosmetix.com` are on the same server block so no extra www↔apex redirect.
+- **Faster response:** `sendfile on` and `tcp_nopush on` so static files (including the initial HTML) are sent efficiently with fewer syscalls and better TCP behavior.
+
 ---
 
 ## Optional next steps

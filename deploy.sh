@@ -225,11 +225,20 @@ server {
     
     root ${DEPLOY_PATH}/dist;
     index index.html;
+    sendfile on;
+    tcp_nopush on;
     
     ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    
+    # Text compression - reduces first (and all) response size
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 256;
+    gzip_proxied any;
+    gzip_types text/plain text/css text/xml application/json application/javascript application/xml application/x-javascript;
     
     # API proxy
     location /api {

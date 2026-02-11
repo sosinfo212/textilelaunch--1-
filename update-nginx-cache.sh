@@ -16,8 +16,8 @@ if [ ! -f "$CONF" ]; then
   exit 1
 fi
 
-if grep -q "Cache static assets" "$CONF"; then
-  echo "Cache rules already present. Nothing to do."
+if grep -q "Cache static assets" "$CONF" && grep -q "gzip on" "$CONF"; then
+  echo "Cache and gzip already present. Nothing to do."
   exit 0
 fi
 
@@ -36,10 +36,17 @@ server {
     server_name ${DOMAIN} www.${DOMAIN};
     root ${DEPLOY_PATH}/dist;
     index index.html;
+    sendfile on;
+    tcp_nopush on;
     ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 256;
+    gzip_proxied any;
+    gzip_types text/plain text/css text/xml application/json application/javascript application/xml application/x-javascript;
     location /api {
         proxy_pass http://127.0.0.1:${NODE_PORT};
         proxy_http_version 1.1;
