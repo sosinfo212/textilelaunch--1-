@@ -146,6 +146,12 @@ export const ProductAnalyticsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {!loading && !error && analytics && analytics.clickCount === 0 && analytics.totalTimeSpentSeconds === 0 && analytics.totalOrders > 0 && (
+        <p className="mt-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          Clics et temps à 0 ? Sur le serveur, exécutez la migration : <code className="text-xs bg-amber-100 px-1 rounded">database/add-analytics-events-table.sql</code>, puis redéployez.
+        </p>
+      )}
     </div>
   );
 };

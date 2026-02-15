@@ -3,12 +3,14 @@ import { analyticsAPI } from '../src/utils/api';
 
 const SESSION_KEY = 'tl_visitor_id';
 const DEBOUNCE_MS = 800;
+const HEARTBEAT_INTERVAL_MS = 15000;
 
 /**
  * Reusable hook for product landing analytics.
  * - Tracks CTA/button clicks (debounced to prevent duplicates).
  * - Tracks active time using Page Visibility API (pauses when tab inactive).
- * - Sends time on: visibility hidden, route change, page unload, unmount.
+ * - Sends time: every 15s heartbeat while visible, on tab hide, and on leave (beforeunload/pagehide/unmount).
+ *   Heartbeat makes time work on mobile and when beforeunload doesn't fire.
  * Works for any product; no per-product setup required.
  */
 export function useProductAnalytics(productId: string | undefined, productSlug?: string) {
@@ -33,18 +35,23 @@ export function useProductAnalytics(productId: string | undefined, productSlug?:
     sentTimeRef.current = false;
   }, [productId]);
 
-  const sendTime = useCallback(() => {
-    if (!productId || sentTimeRef.current) return;
-    const sessionId = sessionIdRef.current;
-    if (!sessionId) return;
-    const now = Date.now();
-    const activeMs = document.visibilityState === 'visible' ? now - activeStartRef.current : 0;
-    const totalMs = accumulatedMsRef.current + activeMs;
-    const seconds = Math.round(totalMs / 1000);
-    if (seconds < 1) return;
-    sentTimeRef.current = true;
-    analyticsAPI.trackTime(productId, sessionId, seconds).catch(() => {});
-  }, [productId]);
+  const flushTime = useCallback(
+    (markSent = false) => {
+      if (!productId) return;
+      const sessionId = sessionIdRef.current;
+      if (!sessionId) return;
+      const now = Date.now();
+      const activeMs = document.visibilityState === 'visible' ? now - activeStartRef.current : 0;
+      const totalMs = accumulatedMsRef.current + activeMs;
+      const seconds = Math.round(totalMs / 1000);
+      if (seconds < 1) return;
+      if (markSent) sentTimeRef.current = true;
+      accumulatedMsRef.current = 0;
+      activeStartRef.current = now;
+      analyticsAPI.trackTime(productId, sessionId, seconds).catch(() => {});
+    },
+    [productId]
+  );
 
   useEffect(() => {
     if (!productId) return;
@@ -52,25 +59,32 @@ export function useProductAnalytics(productId: string | undefined, productSlug?:
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         accumulatedMsRef.current += Date.now() - activeStartRef.current;
+        flushTime(false);
       } else {
         activeStartRef.current = Date.now();
       }
     };
 
-    const handleBeforeUnload = () => sendTime();
-    const handlePageHide = () => sendTime();
+    const heartbeat = () => {
+      if (document.visibilityState === 'visible') flushTime(false);
+    };
+
+    const handleBeforeUnload = () => flushTime(true);
+    const handlePageHide = () => flushTime(true);
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('pagehide', handlePageHide);
+    const heartbeatId = setInterval(heartbeat, HEARTBEAT_INTERVAL_MS);
 
     return () => {
-      sendTime();
+      clearInterval(heartbeatId);
+      flushTime(true);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('pagehide', handlePageHide);
     };
-  }, [productId, sendTime]);
+  }, [productId, flushTime]);
 
   const trackClick = useCallback(
     (eventType: string = 'cta_click') => {

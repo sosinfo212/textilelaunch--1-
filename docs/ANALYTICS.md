@@ -57,3 +57,12 @@
 
 - **clickCount**: `SELECT COUNT(*) FROM analytics_events WHERE product_id = ? AND event_type = 'cta_click'`
 - **totalTimeSpentSeconds**: `SELECT COALESCE(SUM(event_value), 0) FROM analytics_events WHERE product_id = ? AND event_type = 'time_spent'`
+
+## Troubleshooting: Clicks and time stay at 0
+
+1. **Run the migration on the server** (required once):
+   ```bash
+   mysql -u textilelaunch_db -p'...' -h 127.0.0.1 agency < database/add-analytics-events-table.sql
+   ```
+2. **Redeploy** so the frontend sends to `/api/analytics/events` and `/api/analytics/time`. Time is sent every 15s (heartbeat) while the tab is active, and on tab switch/leave.
+3. **Optional: use a tracking library** for maximum reliability (e.g. **PostHog** or **Umami**): they handle batching, retries, and mobile quirks. You can keep our backend for ownership and add a library in parallel, or replace with their API.
