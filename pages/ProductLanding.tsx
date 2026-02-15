@@ -107,9 +107,10 @@ export const ProductLanding: React.FC = () => {
     };
   }, [product]);
 
-  // Analytics: record view on land, record time on leave
+  // Analytics: record view on land, record time on leave (works for visitors without login)
   useEffect(() => {
     if (!productId || !product) return;
+    const baseUrl = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL ? import.meta.env.VITE_API_URL : '/api';
     let sessionId = sessionStorage.getItem('tl_visitor_id');
     if (!sessionId) {
       sessionId = `s_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
@@ -117,18 +118,27 @@ export const ProductLanding: React.FC = () => {
     }
     analyticsSessionId.current = sessionId;
     landingStartedAt.current = Date.now();
-    productsAPI.recordView(productId, sessionId).catch(() => {});
+    // Use fetch with credentials: 'omit' so anonymous visitors (no cookie) still record
+    fetch(`${baseUrl}/products/${productId}/view`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'omit',
+      body: JSON.stringify({ sessionId }),
+    }).catch(() => {});
 
     const sendLeave = () => {
       const spent = (Date.now() - landingStartedAt.current) / 1000;
       if (spent < 0.5) return;
-      const url = `${import.meta.env.VITE_API_URL || '/api'}/products/${productId}/view/leave`;
+      const url = `${baseUrl}/products/${productId}/view/leave`;
       const body = JSON.stringify({ sessionId: analyticsSessionId.current, timeSpentSeconds: Math.round(spent) });
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
-      } else {
-        fetch(url, { method: 'POST', body, headers: { 'Content-Type': 'application/json' }, keepalive: true }).catch(() => {});
-      }
+      // fetch + keepalive ensures JSON body and Content-Type are sent correctly (sendBeacon can be unreliable)
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        credentials: 'omit',
+        keepalive: true,
+      }).catch(() => {});
     };
 
     const onVisibilityChange = () => {

@@ -263,7 +263,8 @@ router.post('/:id/view', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     if (err.code === 'ER_NO_SUCH_TABLE') {
-      return res.json({ ok: true }); // table not migrated yet
+      console.error('Product view: product_views table missing. Run database/add-product-views-table.sql');
+      return res.status(503).json({ error: 'Analytics not configured' });
     }
     console.error('Product view error:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -274,9 +275,14 @@ router.post('/:id/view', async (req, res) => {
 router.post('/:id/view/leave', async (req, res) => {
   try {
     const { id: productId } = req.params;
-    const { sessionId, timeSpentSeconds } = req.body || {};
-    if (!sessionId || typeof timeSpentSeconds !== 'number') {
-      return res.status(400).json({ error: 'sessionId and timeSpentSeconds required' });
+    const body = req.body || {};
+    let { sessionId, timeSpentSeconds } = body;
+    if (!sessionId || typeof sessionId !== 'string') {
+      return res.status(400).json({ error: 'sessionId required' });
+    }
+    if (typeof timeSpentSeconds === 'string') timeSpentSeconds = parseInt(timeSpentSeconds, 10);
+    if (typeof timeSpentSeconds !== 'number' || isNaN(timeSpentSeconds)) {
+      return res.status(400).json({ error: 'timeSpentSeconds required (number)' });
     }
     const [products] = await db.execute('SELECT id FROM products WHERE id = ?', [productId]);
     if (products.length === 0) return res.status(404).json({ error: 'Product not found' });
@@ -286,7 +292,9 @@ router.post('/:id/view/leave', async (req, res) => {
     );
     res.json({ ok: true });
   } catch (err) {
-    if (err.code === 'ER_NO_SUCH_TABLE') return res.json({ ok: true });
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+      return res.status(503).json({ error: 'Analytics not configured' });
+    }
     console.error('Product view leave error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
