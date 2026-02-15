@@ -242,6 +242,96 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 });
 
+// Record landing page view (public - for analytics)
+router.post('/:id/view', async (req, res) => {
+  try {
+    const { id: productId } = req.params;
+    const { sessionId } = req.body || {};
+    if (!sessionId || typeof sessionId !== 'string' || sessionId.length > 191) {
+      return res.status(400).json({ error: 'sessionId required' });
+    }
+    const [products] = await db.execute('SELECT id FROM products WHERE id = ?', [productId]);
+    if (products.length === 0) return res.status(404).json({ error: 'Product not found' });
+    const viewId = `pv_${uuidv4()}`;
+    await db.execute(
+      `INSERT INTO product_views (id, product_id, session_id, first_seen_at, time_spent_seconds)
+       VALUES (?, ?, ?, NOW(), 0)
+       ON DUPLICATE KEY UPDATE first_seen_at = first_seen_at`,
+      [viewId, productId, sessionId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+      return res.json({ ok: true }); // table not migrated yet
+    }
+    console.error('Product view error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Record leave / time spent (public)
+router.post('/:id/view/leave', async (req, res) => {
+  try {
+    const { id: productId } = req.params;
+    const { sessionId, timeSpentSeconds } = req.body || {};
+    if (!sessionId || typeof timeSpentSeconds !== 'number') {
+      return res.status(400).json({ error: 'sessionId and timeSpentSeconds required' });
+    }
+    const [products] = await db.execute('SELECT id FROM products WHERE id = ?', [productId]);
+    if (products.length === 0) return res.status(404).json({ error: 'Product not found' });
+    await db.execute(
+      `UPDATE product_views SET time_spent_seconds = GREATEST(COALESCE(time_spent_seconds, 0), ?) WHERE product_id = ? AND session_id = ?`,
+      [Math.min(Math.round(timeSpentSeconds), 86400), productId, sessionId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') return res.json({ ok: true });
+    console.error('Product view leave error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get product analytics (auth, owner only)
+router.get('/:id/analytics', authenticate, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { id: productId } = req.params;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+    const [products] = await db.execute('SELECT owner_id FROM products WHERE id = ?', [productId]);
+    if (products.length === 0) return res.status(404).json({ error: 'Product not found' });
+    if (products[0].owner_id !== userId) return res.status(403).json({ error: 'Not authorized' });
+    let uniqueClicks = 0;
+    let totalTimeSpentSeconds = 0;
+    try {
+      const [views] = await db.execute(
+        'SELECT COUNT(*) AS cnt, COALESCE(SUM(time_spent_seconds), 0) AS total FROM product_views WHERE product_id = ?',
+        [productId]
+      );
+      if (views.length) {
+        uniqueClicks = Number(views[0].cnt) || 0;
+        totalTimeSpentSeconds = Number(views[0].total) || 0;
+      }
+    } catch (e) {
+      if (e.code !== 'ER_NO_SUCH_TABLE') throw e;
+    }
+    const [orderCount] = await db.execute(
+      'SELECT COUNT(*) AS cnt FROM orders WHERE product_id = ?',
+      [productId]
+    );
+    const totalOrders = orderCount.length ? Number(orderCount[0].cnt) || 0 : 0;
+    res.json({
+      analytics: {
+        uniqueClicks,
+        totalOrders,
+        totalTimeSpentSeconds: Math.round(totalTimeSpentSeconds),
+      },
+    });
+  } catch (err) {
+    console.error('Get analytics error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Helper function to format product
 function formatProduct(row) {
   let images = [];

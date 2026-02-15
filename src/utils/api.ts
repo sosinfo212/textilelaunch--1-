@@ -137,6 +137,26 @@ export const productsAPI = {
       method: 'DELETE',
     });
   },
+
+  recordView: async (productId: string, sessionId: string) => {
+    return apiRequest<{ ok: boolean }>(`/products/${productId}/view`, {
+      method: 'POST',
+      body: JSON.stringify({ sessionId }),
+    });
+  },
+
+  recordLeave: async (productId: string, sessionId: string, timeSpentSeconds: number) => {
+    return apiRequest<{ ok: boolean }>(`/products/${productId}/view/leave`, {
+      method: 'POST',
+      body: JSON.stringify({ sessionId, timeSpentSeconds }),
+    });
+  },
+
+  getAnalytics: async (productId: string) => {
+    return apiRequest<{ analytics: { uniqueClicks: number; totalOrders: number; totalTimeSpentSeconds: number } }>(
+      `/products/${productId}/analytics`
+    );
+  },
 };
 
 // Orders API

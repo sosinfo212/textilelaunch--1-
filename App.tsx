@@ -13,6 +13,7 @@ import { TemplateBuilder } from './pages/TemplateBuilder';
 import { CategoryList } from './pages/CategoryList';
 import { LoginPage } from './pages/LoginPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ProductAnalyticsPage } from './pages/ProductAnalyticsPage';
 
 // Lazy-load landing page so product/:id only loads this chunk (reduces initial JS)
 const ProductLanding = lazy(() => import('./pages/ProductLanding').then(m => ({ default: m.ProductLanding })));
@@ -50,6 +51,7 @@ function App() {
               <Route path="/" element={<RequireAuth><SellerDashboard /></RequireAuth>} />
               <Route path="/add-product" element={<RequireAuth><AddProduct /></RequireAuth>} />
               <Route path="/edit-product/:productId" element={<RequireAuth><EditProduct /></RequireAuth>} />
+              <Route path="/product/:productId/analytics" element={<RequireAuth><ProductAnalyticsPage /></RequireAuth>} />
               <Route path="/categories" element={<RequireAuth><CategoryList /></RequireAuth>} />
               <Route path="/orders" element={<RequireAuth><OrderList /></RequireAuth>} />
               <Route path="/orders/:orderId" element={<RequireAuth><OrderDetails /></RequireAuth>} />

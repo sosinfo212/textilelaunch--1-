@@ -40,8 +40,10 @@ export const ProductLanding: React.FC = () => {
     return allMedia;
   }, [product]);
 
-  // Refs for scrolling
+  // Refs for scrolling and analytics
   const formRef = useRef<HTMLDivElement>(null);
+  const landingStartedAt = useRef<number>(0);
+  const analyticsSessionId = useRef<string>('');
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -104,6 +106,43 @@ export const ProductLanding: React.FC = () => {
       document.title = 'Trendy Cosmetix';
     };
   }, [product]);
+
+  // Analytics: record view on land, record time on leave
+  useEffect(() => {
+    if (!productId || !product) return;
+    let sessionId = sessionStorage.getItem('tl_visitor_id');
+    if (!sessionId) {
+      sessionId = `s_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+      sessionStorage.setItem('tl_visitor_id', sessionId);
+    }
+    analyticsSessionId.current = sessionId;
+    landingStartedAt.current = Date.now();
+    productsAPI.recordView(productId, sessionId).catch(() => {});
+
+    const sendLeave = () => {
+      const spent = (Date.now() - landingStartedAt.current) / 1000;
+      if (spent < 0.5) return;
+      const url = `${import.meta.env.VITE_API_URL || '/api'}/products/${productId}/view/leave`;
+      const body = JSON.stringify({ sessionId: analyticsSessionId.current, timeSpentSeconds: Math.round(spent) });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
+      } else {
+        fetch(url, { method: 'POST', body, headers: { 'Content-Type': 'application/json' }, keepalive: true }).catch(() => {});
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') sendLeave();
+    };
+    const onBeforeUnload = () => sendLeave();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      sendLeave();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [productId, product]);
 
   // Load Facebook Pixel after first paint to avoid blocking LCP (deferred)
   useEffect(() => {

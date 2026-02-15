@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
-import { ExternalLink, Edit2, Tag, Box, Truck, Trash2 } from 'lucide-react';
+import { ExternalLink, Edit2, Tag, Box, Truck, Trash2, BarChart2 } from 'lucide-react';
 
 export const SellerDashboard: React.FC = () => {
   const { products, deleteProduct } = useStore();
@@ -117,9 +117,17 @@ export const SellerDashboard: React.FC = () => {
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Voir la page
                   </Link>
+                  <Link
+                    to={`/product/${product.id}/analytics`}
+                    className="flex-shrink-0 inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                    title="Statistiques"
+                  >
+                    <BarChart2 className="h-4 w-4" />
+                  </Link>
                   <Link 
                     to={`/edit-product/${product.id}`}
                     className="flex-shrink-0 inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                    title="Modifier"
                   >
                     <Edit2 className="h-4 w-4" />
                   </Link>
