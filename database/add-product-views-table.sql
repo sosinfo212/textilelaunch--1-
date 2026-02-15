@@ -1,5 +1,6 @@
 -- Product analytics: unique visitors and time on landing page
 -- Run: mysql -u root -p agency < database/add-product-views-table.sql
+-- No FK to avoid errno 150 when products table charset/collation differs.
 
 USE agency;
 
@@ -10,6 +11,5 @@ CREATE TABLE IF NOT EXISTS product_views (
   first_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   time_spent_seconds INT DEFAULT 0,
   UNIQUE KEY uq_product_session (product_id, session_id),
-  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
   INDEX idx_product_views_product (product_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

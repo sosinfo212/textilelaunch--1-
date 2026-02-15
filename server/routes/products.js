@@ -233,6 +233,7 @@ router.delete('/:id', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
+    await db.execute('DELETE FROM product_views WHERE product_id = ?', [id]).catch(() => {});
     await db.execute('DELETE FROM products WHERE id = ?', [id]);
 
     res.json({ success: true });
