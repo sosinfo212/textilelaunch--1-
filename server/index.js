@@ -10,6 +10,7 @@ import ordersRoutes from './routes/orders.js';
 import templatesRoutes from './routes/templates.js';
 import settingsRoutes from './routes/settings.js';
 import geminiRoutes from './routes/gemini.js';
+import analyticsRoutes from './routes/analytics.js';
 
 // Load .env file - specify path explicitly
 import { fileURLToPath } from 'url';
@@ -159,6 +160,7 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/templates', templatesRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/gemini', geminiRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -245,6 +245,39 @@ export const settingsAPI = {
   },
 };
 
+// Analytics API (public endpoints - use fetch with credentials: 'omit' for visitors)
+export const analyticsAPI = {
+  trackEvent: (productId: string, productSlug: string, eventType: string, sessionId: string, timestamp?: number) => {
+    const url = `${API_BASE_URL}/analytics/events`;
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'omit',
+      body: JSON.stringify({
+        productId,
+        productSlug,
+        eventType,
+        sessionId,
+        timestamp: timestamp ?? Date.now(),
+      }),
+    });
+  },
+  trackTime: (productId: string, sessionId: string, timeSpentSeconds: number) => {
+    const url = `${API_BASE_URL}/analytics/time`;
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'omit',
+      body: JSON.stringify({ productId, sessionId, timeSpentSeconds }),
+    });
+  },
+  getSummary: (productId: string) => {
+    return apiRequest<{ productId: string; clickCount: number; totalTimeSpentSeconds: number }>(
+      `/analytics/summary/${productId}`
+    );
+  },
+};
+
 // Gemini API
 export const geminiAPI = {
   generate: async (prompt: string, productName?: string, keywords?: string) => {

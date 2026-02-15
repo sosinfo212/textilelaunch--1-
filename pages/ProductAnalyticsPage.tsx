@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
-import { productsAPI } from '../src/utils/api';
-import { BarChart2, MousePointer, ShoppingCart, Clock, ArrowLeft } from 'lucide-react';
+import { productsAPI, analyticsAPI } from '../src/utils/api';
+import { BarChart2, MousePointer, ShoppingCart, Clock, ArrowLeft, MousePointerClick } from 'lucide-react';
 
 export const ProductAnalyticsPage: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -11,6 +11,7 @@ export const ProductAnalyticsPage: React.FC = () => {
     uniqueClicks: number;
     totalOrders: number;
     totalTimeSpentSeconds: number;
+    clickCount: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,10 +30,18 @@ export const ProductAnalyticsPage: React.FC = () => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    productsAPI
-      .getAnalytics(productId)
-      .then((res) => {
-        if (!cancelled) setAnalytics(res.analytics);
+    Promise.all([
+      productsAPI.getAnalytics(productId),
+      analyticsAPI.getSummary(productId).catch(() => ({ productId, clickCount: 0, totalTimeSpentSeconds: 0 })),
+    ])
+      .then(([res, summary]) => {
+        if (cancelled) return;
+        setAnalytics({
+          uniqueClicks: res.analytics.uniqueClicks,
+          totalOrders: res.analytics.totalOrders,
+          totalTimeSpentSeconds: summary.totalTimeSpentSeconds > 0 ? summary.totalTimeSpentSeconds : res.analytics.totalTimeSpentSeconds,
+          clickCount: summary.clickCount ?? 0,
+        });
       })
       .catch((err) => {
         if (!cancelled) setError(err?.message || 'Erreur lors du chargement des statistiques.');
@@ -84,18 +93,30 @@ export const ProductAnalyticsPage: React.FC = () => {
       )}
 
       {!loading && !error && analytics && (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
                 <MousePointer className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-500">Clics uniques</p>
+                <p className="text-sm font-medium text-gray-500">Visiteurs uniques</p>
                 <p className="text-2xl font-bold text-gray-900">{analytics.uniqueClicks}</p>
               </div>
             </div>
-            <p className="mt-2 text-xs text-gray-400">Visiteurs uniques sur la page</p>
+            <p className="mt-2 text-xs text-gray-400">Sessions uniques sur la page</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-violet-100 text-violet-600">
+                <MousePointerClick className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Clics CTA</p>
+                <p className="text-2xl font-bold text-gray-900">{analytics.clickCount}</p>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-gray-400">Clics sur boutons (ordre, quantité, etc.)</p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <div className="flex items-center gap-3">
@@ -115,13 +136,13 @@ export const ProductAnalyticsPage: React.FC = () => {
                 <Clock className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-500">Temps total passé</p>
+                <p className="text-sm font-medium text-gray-500">Temps actif total</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {formatDuration(analytics.totalTimeSpentSeconds)}
                 </p>
               </div>
             </div>
-            <p className="mt-2 text-xs text-gray-400">Temps cumulé sur la landing page</p>
+            <p className="mt-2 text-xs text-gray-400">Temps cumulé (onglet actif, Page Visibility)</p>
           </div>
         </div>
       )}

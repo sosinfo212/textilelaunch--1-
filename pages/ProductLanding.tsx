@@ -7,6 +7,7 @@ import { formatPrice } from '../src/utils/currency';
 import { CheckCircle, ArrowLeft, Phone, MapPin, Truck, ShieldCheck, Star, ShoppingCart, Plus, Minus, Home, AlertCircle, Video } from 'lucide-react';
 import { LandingPageRenderer } from '../components/LandingPageRenderer';
 import { productsAPI, templatesAPI, settingsAPI } from '../src/utils/api';
+import { useProductAnalytics } from '../hooks/useProductAnalytics';
 
 export const ProductLanding: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -40,10 +41,8 @@ export const ProductLanding: React.FC = () => {
     return allMedia;
   }, [product]);
 
-  // Refs for scrolling and analytics
+  // Refs for scrolling
   const formRef = useRef<HTMLDivElement>(null);
-  const landingStartedAt = useRef<number>(0);
-  const analyticsSessionId = useRef<string>('');
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -107,52 +106,8 @@ export const ProductLanding: React.FC = () => {
     };
   }, [product]);
 
-  // Analytics: record view on land, record time on leave (works for visitors without login)
-  useEffect(() => {
-    if (!productId || !product) return;
-    const baseUrl = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL ? import.meta.env.VITE_API_URL : '/api';
-    let sessionId = sessionStorage.getItem('tl_visitor_id');
-    if (!sessionId) {
-      sessionId = `s_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
-      sessionStorage.setItem('tl_visitor_id', sessionId);
-    }
-    analyticsSessionId.current = sessionId;
-    landingStartedAt.current = Date.now();
-    // Use fetch with credentials: 'omit' so anonymous visitors (no cookie) still record
-    fetch(`${baseUrl}/products/${productId}/view`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'omit',
-      body: JSON.stringify({ sessionId }),
-    }).catch(() => {});
-
-    const sendLeave = () => {
-      const spent = (Date.now() - landingStartedAt.current) / 1000;
-      if (spent < 0.5) return;
-      const url = `${baseUrl}/products/${productId}/view/leave`;
-      const body = JSON.stringify({ sessionId: analyticsSessionId.current, timeSpentSeconds: Math.round(spent) });
-      // fetch + keepalive ensures JSON body and Content-Type are sent correctly (sendBeacon can be unreliable)
-      fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-        credentials: 'omit',
-        keepalive: true,
-      }).catch(() => {});
-    };
-
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') sendLeave();
-    };
-    const onBeforeUnload = () => sendLeave();
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => {
-      sendLeave();
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-      window.removeEventListener('beforeunload', onBeforeUnload);
-    };
-  }, [productId, product]);
+  // Product analytics: CTA clicks + active time (Visibility API), sent to /api/analytics
+  const { trackClick } = useProductAnalytics(product?.id, product?.id);
 
   // Load Facebook Pixel after first paint to avoid blocking LCP (deferred)
   useEffect(() => {
@@ -477,7 +432,7 @@ export const ProductLanding: React.FC = () => {
                          <div className="text-xl font-black text-red-600">{formatPrice(product.price, product.currency)}</div>
                       </div>
                       <button 
-                        onClick={scrollToForm}
+                        onClick={() => { trackClick('cta_click'); scrollToForm(); }}
                         className="flex-1 bg-red-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center animate-pulse"
                       >
                          اطلب الآن
@@ -574,7 +529,7 @@ export const ProductLanding: React.FC = () => {
                     {media.map((item, idx) => (
                         <button 
                             key={idx}
-                            onClick={() => setCurrentMediaIndex(idx)}
+                            onClick={() => { trackClick('cta_click'); setCurrentMediaIndex(idx); }}
                             className={`relative rounded-xl overflow-hidden border-2 transition-all ${currentMediaIndex === idx ? 'border-red-600 opacity-100' : 'border-transparent opacity-70 hover:opacity-100'}`}
                         >
                             <div className="aspect-square">
@@ -683,11 +638,11 @@ export const ProductLanding: React.FC = () => {
                         <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
                             <span className="font-bold text-gray-700">الكمية:</span>
                             <div className="flex items-center gap-4">
-                                <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-red-600">
+                                <button type="button" onClick={() => { trackClick('cta_click'); setQuantity(Math.max(1, quantity - 1)); }} className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-red-600">
                                     <Minus size={16} />
                                 </button>
                                 <span className="font-black text-xl w-6 text-center">{quantity}</span>
-                                <button type="button" onClick={() => setQuantity(quantity + 1)} className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-green-600">
+                                <button type="button" onClick={() => { trackClick('cta_click'); setQuantity(quantity + 1); }} className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-green-600">
                                     <Plus size={16} />
                                 </button>
                             </div>
@@ -749,6 +704,7 @@ export const ProductLanding: React.FC = () => {
                         {/* Submit Button */}
                         <button
                             type="submit"
+                            onClick={() => trackClick('cta_click')}
                             className="w-full bg-red-600 border border-transparent rounded-xl py-4 px-8 flex items-center justify-center text-lg font-black text-white hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-200 shadow-lg transform transition-transform active:scale-95"
                         >
                             <ShoppingCart className="ml-2 h-6 w-6" />
@@ -805,7 +761,7 @@ export const ProductLanding: React.FC = () => {
              <div className="text-xl font-black text-red-600">{formatPrice(product.price * quantity, product.currency)}</div>
           </div>
           <button 
-            onClick={scrollToForm}
+            onClick={() => { trackClick('cta_click'); scrollToForm(); }}
             className="flex-1 bg-red-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center animate-pulse"
           >
              اطلب الآن
