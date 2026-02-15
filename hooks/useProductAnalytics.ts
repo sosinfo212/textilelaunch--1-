@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { analyticsAPI } from '../src/utils/api';
+import { analyticsAPI, productsAPI } from '../src/utils/api';
 
 const SESSION_KEY = 'tl_visitor_id';
 const DEBOUNCE_MS = 800;
@@ -33,6 +33,8 @@ export function useProductAnalytics(productId: string | undefined, productSlug?:
     activeStartRef.current = Date.now();
     accumulatedMsRef.current = 0;
     sentTimeRef.current = false;
+    // Record unique visitor (product_views) for "Visiteurs uniques"
+    productsAPI.recordView(productId, sid).catch(() => {});
   }, [productId]);
 
   const flushTime = useCallback(
