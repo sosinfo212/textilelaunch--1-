@@ -10,26 +10,30 @@
     <!-- Non-blocking: media=print prevents block; on load switch to all so Cairo applies -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap"></noscript>
-    <script src="https://cdn.tailwindcss.com" defer></script>
+    <script src="https://cdn.tailwindcss.com" defer id="tailwind-cdn"></script>
     <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              cairo: ['Cairo', 'sans-serif'],
-            },
-            colors: {
-              brand: {
-                50: '#f0f9ff',
-                100: '#e0f2fe',
-                500: '#0ea5e9',
-                600: '#0284c7',
-                900: '#0c4a6e',
+      (function() {
+        function applyConfig() {
+          if (typeof window.tailwind !== 'undefined') {
+            window.tailwind.config = {
+              theme: {
+                extend: {
+                  fontFamily: { cairo: ['Cairo', 'sans-serif'] },
+                  colors: {
+                    brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' }
+                  }
+                }
               }
-            }
+            };
+            return;
           }
+          setTimeout(applyConfig, 50);
         }
-      }
+        var s = document.getElementById('tailwind-cdn');
+        if (s) s.addEventListener('load', applyConfig);
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyConfig);
+        else applyConfig();
+      })();
     </script>
   <script type="importmap">
 {

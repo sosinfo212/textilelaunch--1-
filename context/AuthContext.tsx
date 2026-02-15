@@ -31,58 +31,53 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState<boolean>(true); // Track loading state
 
   useEffect(() => {
-    // Load users from API
+    let cancelled = false;
+    setIsLoading(true);
+
+    const loadUser = async () => {
+      try {
+        const res = await authAPI.getMe();
+        if (cancelled) return;
+        if (res.user) {
+          setUser(res.user);
+          return true;
+        }
+        setUser(null);
+        return false;
+      } catch (error: any) {
+        if (cancelled) return;
+        setUser(null);
+        if (error?.message && !error.message.includes('Failed to fetch') && !error.message.includes('ERR_CONNECTION_REFUSED') && !error.message.includes('401') && !error.message.includes('Authentication')) {
+          console.error('Error loading user session:', error);
+        }
+        return false;
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
     const loadUsers = async () => {
       try {
         const res = await authAPI.getUsers();
-        setUsers(res.users);
+        if (!cancelled) setUsers(res.users);
       } catch (error: any) {
-        // Only log if it's not a connection error (server might be starting)
-        if (error?.message && !error.message.includes('Failed to fetch') && !error.message.includes('ERR_CONNECTION_REFUSED')) {
+        if (!cancelled) setUsers([DEFAULT_ADMIN]);
+        if (error?.message && !error.message.includes('Failed to fetch') && !error.message.includes('ERR_CONNECTION_REFUSED') && !error.message.includes('401') && !error.message.includes('Authentication')) {
           console.error('Error loading users:', error);
         }
-        // Fallback to default admin if API fails
-        setUsers([DEFAULT_ADMIN]);
       }
     };
 
-    // Add a small delay to allow server to start
-    const timer = setTimeout(() => {
-      loadUsers();
-    }, 500);
-
-    // Check active session via API (session stored in database, cookie handled automatically)
-    const loadUser = async () => {
-      setIsLoading(true); // Start loading
-      try {
-        const res = await authAPI.getMe();
-        if (res.user) {
-          setUser(res.user);
-        } else {
-          // No user returned - session might be invalid
-          setUser(null);
-        }
-      } catch (error: any) {
-        // Only log if it's not a connection error
-        if (error?.message && !error.message.includes('Failed to fetch') && !error.message.includes('ERR_CONNECTION_REFUSED')) {
-          console.error('Error loading user session:', error);
-          // If it's a 401, user needs to login
-          if (error?.message?.includes('401') || error?.message?.includes('Authentication')) {
-            console.log('Session expired or invalid. Please login.');
-          }
-        }
-        // Session invalid - backend will handle cookie cleanup
-        setUser(null);
-      } finally {
-        setIsLoading(false); // Stop loading
-      }
+    const init = async () => {
+      const hasSession = await loadUser();
+      if (hasSession) await loadUsers();
     };
-    
-    setTimeout(() => {
-      loadUser();
-    }, 500);
 
-    return () => clearTimeout(timer);
+    const timer = setTimeout(init, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, []);
 
   const login = async (email: string, pass: string): Promise<boolean> => {
