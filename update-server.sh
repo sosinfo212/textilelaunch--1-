@@ -28,10 +28,14 @@ if [ -f "package.json" ]; then
     sudo -u ${APP_USER} npm run build
 fi
 
-# Restart service
-systemctl restart ${SERVICE_NAME}
-
-echo "✅ Server updated and restarted."
-echo "Check service status: systemctl status ${SERVICE_NAME}"
+# Re-apply database config and restart (fixes .env/DB connection after git pull)
+if [ -f "${DEPLOY_PATH}/fix-database.sh" ]; then
+    echo "Applying database connection fix and restarting..."
+    bash "${DEPLOY_PATH}/fix-database.sh"
+else
+    systemctl restart ${SERVICE_NAME}
+    echo "✅ Server updated and restarted."
+    echo "Check service status: systemctl status ${SERVICE_NAME}"
+fi
 echo ""
 echo "To add Nginx cache headers (one-time, if not done yet): sudo bash ${DEPLOY_PATH}/update-nginx-cache.sh"
