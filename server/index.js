@@ -11,6 +11,7 @@ import templatesRoutes from './routes/templates.js';
 import settingsRoutes from './routes/settings.js';
 import geminiRoutes from './routes/gemini.js';
 import analyticsRoutes from './routes/analytics.js';
+import trackingRoutes from './routes/tracking.js';
 
 // Load .env file - specify path explicitly
 import { fileURLToPath } from 'url';
@@ -161,6 +162,7 @@ app.use('/api/templates', templatesRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/gemini', geminiRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/tracking', trackingRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

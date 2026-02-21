@@ -138,17 +138,28 @@ export const productsAPI = {
     });
   },
 
-  recordView: async (productId: string, sessionId: string) => {
+  recordView: async (
+    productId: string,
+    sessionId: string,
+    device?: string,
+    browser?: string
+  ) => {
     return apiRequest<{ ok: boolean }>(`/products/${productId}/view`, {
       method: 'POST',
-      body: JSON.stringify({ sessionId }),
+      body: JSON.stringify({ sessionId, device, browser }),
     });
   },
 
-  recordLeave: async (productId: string, sessionId: string, timeSpentSeconds: number) => {
+  recordLeave: async (
+    productId: string,
+    sessionId: string,
+    timeSpentSeconds: number,
+    device?: string,
+    browser?: string
+  ) => {
     return apiRequest<{ ok: boolean }>(`/products/${productId}/view/leave`, {
       method: 'POST',
-      body: JSON.stringify({ sessionId, timeSpentSeconds }),
+      body: JSON.stringify({ sessionId, timeSpentSeconds, device, browser }),
     });
   },
 
@@ -275,6 +286,41 @@ export const analyticsAPI = {
     return apiRequest<{ productId: string; clickCount: number; totalTimeSpentSeconds: number }>(
       `/analytics/summary/${productId}`
     );
+  },
+};
+
+// Tracking pixel API (public). Use for img src or sendBeacon.
+export const trackingAPI = {
+  getPixelUrl: (productId: string, sessionId: string, timeSpentSeconds = 0) => {
+    const base = API_BASE_URL.replace(/\/$/, '');
+    const params = new URLSearchParams({
+      productId,
+      sessionId,
+      timeSpent: String(timeSpentSeconds),
+    });
+    return `${base}/tracking/pixel?${params.toString()}`;
+  },
+  trackBeacon: (
+    productId: string,
+    sessionId: string,
+    timeSpentSeconds: number,
+    device?: string,
+    browser?: string
+  ) => {
+    const url = `${API_BASE_URL.replace(/\/$/, '')}/tracking/pixel`;
+    const blob = new Blob(
+      [
+        JSON.stringify({
+          productId,
+          sessionId,
+          timeSpentSeconds,
+          device,
+          browser,
+        }),
+      ],
+      { type: 'application/json' }
+    );
+    navigator.sendBeacon?.(url, blob);
   },
 };
 

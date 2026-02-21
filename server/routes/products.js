@@ -243,22 +243,24 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 });
 
-// Record landing page view (public - for analytics)
+// Record landing page view (public - for analytics). Optional: device, browser.
 router.post('/:id/view', async (req, res) => {
   try {
     const { id: productId } = req.params;
-    const { sessionId } = req.body || {};
+    const { sessionId, device, browser } = req.body || {};
     if (!sessionId || typeof sessionId !== 'string' || sessionId.length > 191) {
       return res.status(400).json({ error: 'sessionId required' });
     }
     const [products] = await db.execute('SELECT id FROM products WHERE id = ?', [productId]);
     if (products.length === 0) return res.status(404).json({ error: 'Product not found' });
     const viewId = `pv_${uuidv4()}`;
+    const dev = (device && String(device).slice(0, 50)) || null;
+    const br = (browser && String(browser).slice(0, 100)) || null;
     await db.execute(
-      `INSERT INTO product_views (id, product_id, session_id, first_seen_at, time_spent_seconds)
-       VALUES (?, ?, ?, NOW(), 0)
-       ON DUPLICATE KEY UPDATE first_seen_at = first_seen_at`,
-      [viewId, productId, sessionId]
+      `INSERT INTO product_views (id, product_id, session_id, first_seen_at, time_spent_seconds, device, browser)
+       VALUES (?, ?, ?, NOW(), 0, ?, ?)
+       ON DUPLICATE KEY UPDATE first_seen_at = first_seen_at, device = COALESCE(?, device), browser = COALESCE(?, browser)`,
+      [viewId, productId, sessionId, dev, br, dev, br]
     );
     res.json({ ok: true });
   } catch (err) {
@@ -271,12 +273,12 @@ router.post('/:id/view', async (req, res) => {
   }
 });
 
-// Record leave / time spent (public)
+// Record leave / time spent (public). Optional: device, browser.
 router.post('/:id/view/leave', async (req, res) => {
   try {
     const { id: productId } = req.params;
     const body = req.body || {};
-    let { sessionId, timeSpentSeconds } = body;
+    let { sessionId, timeSpentSeconds, device, browser } = body;
     if (!sessionId || typeof sessionId !== 'string') {
       return res.status(400).json({ error: 'sessionId required' });
     }
@@ -286,9 +288,12 @@ router.post('/:id/view/leave', async (req, res) => {
     }
     const [products] = await db.execute('SELECT id FROM products WHERE id = ?', [productId]);
     if (products.length === 0) return res.status(404).json({ error: 'Product not found' });
+    const dev = (device && String(device).slice(0, 50)) || null;
+    const br = (browser && String(browser).slice(0, 100)) || null;
+    const timeSec = Math.min(Math.round(timeSpentSeconds), 86400);
     await db.execute(
-      `UPDATE product_views SET time_spent_seconds = GREATEST(COALESCE(time_spent_seconds, 0), ?) WHERE product_id = ? AND session_id = ?`,
-      [Math.min(Math.round(timeSpentSeconds), 86400), productId, sessionId]
+      `UPDATE product_views SET time_spent_seconds = GREATEST(COALESCE(time_spent_seconds, 0), ?), device = COALESCE(?, device), browser = COALESCE(?, browser) WHERE product_id = ? AND session_id = ?`,
+      [timeSec, dev, br, productId, sessionId]
     );
     res.json({ ok: true });
   } catch (err) {
