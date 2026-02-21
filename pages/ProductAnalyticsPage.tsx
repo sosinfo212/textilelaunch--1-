@@ -136,6 +136,22 @@ export const ProductAnalyticsPage: React.FC = () => {
     return `${day}/${m}`;
   };
 
+  const chartW = 280;
+  const chartH = 120;
+  const pad = { top: 8, right: 8, bottom: 24, left: 28 };
+  const innerW = chartW - pad.left - pad.right;
+  const innerH = chartH - pad.top - pad.bottom;
+
+  function lineChartPath(values: number[], maxVal: number): string {
+    if (!values.length || maxVal <= 0) return '';
+    const pts = values.map((v, i) => {
+      const x = pad.left + (i / Math.max(1, values.length - 1)) * innerW;
+      const y = pad.top + innerH - (v / maxVal) * innerH;
+      return `${x},${y}`;
+    });
+    return `M ${pts.join(' L ')}`;
+  }
+
   const maxVisitors = timeSeries?.length
     ? Math.max(1, ...timeSeries.map((r) => r.visitors))
     : 1;
@@ -300,71 +316,59 @@ export const ProductAnalyticsPage: React.FC = () => {
               </h2>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                  <p className="text-sm font-medium text-gray-700 mb-3">Visiteurs uniques</p>
-                  <div className="space-y-2">
-                    {timeSeries.map((r) => (
-                      <div key={r.date} className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 w-12">{formatShortDate(r.date)}</span>
-                        <div className="flex-1 h-6 bg-gray-100 rounded overflow-hidden">
-                          <div
-                            className="h-full bg-blue-500 rounded min-w-[2px] transition-all"
-                            style={{ width: `${(100 * r.visitors) / maxVisitors}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-medium w-6">{r.visitors}</span>
-                      </div>
-                    ))}
+                  <p className="text-sm font-medium text-gray-700 mb-2">Visiteurs uniques</p>
+                  <div className="overflow-x-auto">
+                    <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full min-w-[200px]" preserveAspectRatio="xMidYMid meet">
+                      <path fill="none" stroke="rgb(59 130 246)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d={lineChartPath(timeSeries.map((r) => r.visitors), maxVisitors)} />
+                      {timeSeries.map((r, i) => {
+                        const x = pad.left + (i / Math.max(1, timeSeries.length - 1)) * innerW;
+                        return (
+                          <text key={r.date} x={x} y={chartH - 4} textAnchor="middle" className="text-[10px] fill-gray-500" style={{ fontFamily: 'system-ui' }}>{formatShortDate(r.date)}</text>
+                        );
+                      })}
+                    </svg>
                   </div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                  <p className="text-sm font-medium text-gray-700 mb-3">Clics CTA</p>
-                  <div className="space-y-2">
-                    {timeSeries.map((r) => (
-                      <div key={r.date} className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 w-12">{formatShortDate(r.date)}</span>
-                        <div className="flex-1 h-6 bg-gray-100 rounded overflow-hidden">
-                          <div
-                            className="h-full bg-violet-500 rounded min-w-[2px] transition-all"
-                            style={{ width: `${(100 * r.clicks) / maxClicks}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-medium w-6">{r.clicks}</span>
-                      </div>
-                    ))}
+                  <p className="text-sm font-medium text-gray-700 mb-2">Clics CTA</p>
+                  <div className="overflow-x-auto">
+                    <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full min-w-[200px]" preserveAspectRatio="xMidYMid meet">
+                      <path fill="none" stroke="rgb(139 92 246)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d={lineChartPath(timeSeries.map((r) => r.clicks), maxClicks)} />
+                      {timeSeries.map((r, i) => {
+                        const x = pad.left + (i / Math.max(1, timeSeries.length - 1)) * innerW;
+                        return (
+                          <text key={r.date} x={x} y={chartH - 4} textAnchor="middle" className="text-[10px] fill-gray-500" style={{ fontFamily: 'system-ui' }}>{formatShortDate(r.date)}</text>
+                        );
+                      })}
+                    </svg>
                   </div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                  <p className="text-sm font-medium text-gray-700 mb-3">Temps (s)</p>
-                  <div className="space-y-2">
-                    {timeSeries.map((r) => (
-                      <div key={r.date} className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 w-12">{formatShortDate(r.date)}</span>
-                        <div className="flex-1 h-6 bg-gray-100 rounded overflow-hidden">
-                          <div
-                            className="h-full bg-amber-500 rounded min-w-[2px] transition-all"
-                            style={{ width: `${(100 * r.timeSpentSeconds) / maxTime}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-medium w-10">{r.timeSpentSeconds}s</span>
-                      </div>
-                    ))}
+                  <p className="text-sm font-medium text-gray-700 mb-2">Temps (s)</p>
+                  <div className="overflow-x-auto">
+                    <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full min-w-[200px]" preserveAspectRatio="xMidYMid meet">
+                      <path fill="none" stroke="rgb(245 158 11)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d={lineChartPath(timeSeries.map((r) => r.timeSpentSeconds), maxTime)} />
+                      {timeSeries.map((r, i) => {
+                        const x = pad.left + (i / Math.max(1, timeSeries.length - 1)) * innerW;
+                        return (
+                          <text key={r.date} x={x} y={chartH - 4} textAnchor="middle" className="text-[10px] fill-gray-500" style={{ fontFamily: 'system-ui' }}>{formatShortDate(r.date)}</text>
+                        );
+                      })}
+                    </svg>
                   </div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                  <p className="text-sm font-medium text-gray-700 mb-3">Commandes</p>
-                  <div className="space-y-2">
-                    {timeSeries.map((r) => (
-                      <div key={r.date} className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 w-12">{formatShortDate(r.date)}</span>
-                        <div className="flex-1 h-6 bg-gray-100 rounded overflow-hidden">
-                          <div
-                            className="h-full bg-green-500 rounded min-w-[2px] transition-all"
-                            style={{ width: `${(100 * r.orders) / maxOrders}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-medium w-6">{r.orders}</span>
-                      </div>
-                    ))}
+                  <p className="text-sm font-medium text-gray-700 mb-2">Commandes</p>
+                  <div className="overflow-x-auto">
+                    <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full min-w-[200px]" preserveAspectRatio="xMidYMid meet">
+                      <path fill="none" stroke="rgb(34 197 94)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d={lineChartPath(timeSeries.map((r) => r.orders), maxOrders)} />
+                      {timeSeries.map((r, i) => {
+                        const x = pad.left + (i / Math.max(1, timeSeries.length - 1)) * innerW;
+                        return (
+                          <text key={r.date} x={x} y={chartH - 4} textAnchor="middle" className="text-[10px] fill-gray-500" style={{ fontFamily: 'system-ui' }}>{formatShortDate(r.date)}</text>
+                        );
+                      })}
+                    </svg>
                   </div>
                 </div>
               </div>
