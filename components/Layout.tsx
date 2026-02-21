@@ -10,7 +10,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const { unreadOrderCount, settings } = useStore();
   const { user, logout } = useAuth();
   
-  const isLandingPage = location.pathname.startsWith('/product/');
+  const isAnalyticsPage = location.pathname.endsWith('/analytics');
+  const isLandingPage = location.pathname.startsWith('/product/') && !isAnalyticsPage;
   const isLoginPage = location.pathname === '/login';
 
   const handleLogout = () => {
