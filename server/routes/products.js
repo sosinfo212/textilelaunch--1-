@@ -305,7 +305,7 @@ router.post('/:id/view/leave', async (req, res) => {
   }
 });
 
-// Get product analytics (auth, owner only)
+// Get product analytics (auth, owner only). Includes tracking: device & browser breakdown.
 router.get('/:id/analytics', authenticate, async (req, res) => {
   try {
     const userId = req.userId;
@@ -316,6 +316,9 @@ router.get('/:id/analytics', authenticate, async (req, res) => {
     if (products[0].owner_id !== userId) return res.status(403).json({ error: 'Not authorized' });
     let uniqueClicks = 0;
     let totalTimeSpentSeconds = 0;
+    const deviceBreakdown = { android: 0, iphone: 0, computer: 0 };
+    const browserBreakdown = {};
+
     try {
       const [views] = await db.execute(
         'SELECT COUNT(*) AS cnt, COALESCE(SUM(time_spent_seconds), 0) AS total FROM product_views WHERE product_id = ?',
@@ -325,19 +328,49 @@ router.get('/:id/analytics', authenticate, async (req, res) => {
         uniqueClicks = Number(views[0].cnt) || 0;
         totalTimeSpentSeconds = Number(views[0].total) || 0;
       }
+
+      try {
+        const [byDevice] = await db.execute(
+          'SELECT device, COUNT(*) AS cnt FROM product_views WHERE product_id = ? AND device IS NOT NULL AND device != "" GROUP BY device',
+          [productId]
+        );
+        for (const row of byDevice) {
+          const d = (row.device || '').toLowerCase().trim() || 'unknown';
+          deviceBreakdown[d] = Number(row.cnt) || 0;
+        }
+      } catch (e) {
+        if (e.code !== 'ER_BAD_FIELD_ERROR') throw e;
+      }
+
+      try {
+        const [byBrowser] = await db.execute(
+          'SELECT browser, COUNT(*) AS cnt FROM product_views WHERE product_id = ? AND browser IS NOT NULL AND browser != "" GROUP BY browser',
+          [productId]
+        );
+        for (const row of byBrowser) {
+          const b = (row.browser || 'Unknown').trim() || 'Unknown';
+          browserBreakdown[b] = Number(row.cnt) || 0;
+        }
+      } catch (e) {
+        if (e.code !== 'ER_BAD_FIELD_ERROR') throw e;
+      }
     } catch (e) {
       if (e.code !== 'ER_NO_SUCH_TABLE') throw e;
     }
+
     const [orderCount] = await db.execute(
       'SELECT COUNT(*) AS cnt FROM orders WHERE product_id = ?',
       [productId]
     );
     const totalOrders = orderCount.length ? Number(orderCount[0].cnt) || 0 : 0;
+
     res.json({
       analytics: {
         uniqueClicks,
         totalOrders,
         totalTimeSpentSeconds: Math.round(totalTimeSpentSeconds),
+        deviceBreakdown,
+        browserBreakdown,
       },
     });
   } catch (err) {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { productsAPI, analyticsAPI } from '../src/utils/api';
-import { BarChart2, MousePointer, ShoppingCart, Clock, ArrowLeft, MousePointerClick } from 'lucide-react';
+import { BarChart2, MousePointer, ShoppingCart, Clock, ArrowLeft, MousePointerClick, Smartphone, Monitor } from 'lucide-react';
 
 export const ProductAnalyticsPage: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -12,6 +12,8 @@ export const ProductAnalyticsPage: React.FC = () => {
     totalOrders: number;
     totalTimeSpentSeconds: number;
     clickCount: number;
+    deviceBreakdown?: Record<string, number>;
+    browserBreakdown?: Record<string, number>;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +43,8 @@ export const ProductAnalyticsPage: React.FC = () => {
           totalOrders: res.analytics.totalOrders,
           totalTimeSpentSeconds: summary.totalTimeSpentSeconds > 0 ? summary.totalTimeSpentSeconds : res.analytics.totalTimeSpentSeconds,
           clickCount: summary.clickCount ?? 0,
+          deviceBreakdown: res.analytics.deviceBreakdown,
+          browserBreakdown: res.analytics.browserBreakdown,
         });
       })
       .catch((err) => {
@@ -143,6 +147,58 @@ export const ProductAnalyticsPage: React.FC = () => {
               </div>
             </div>
             <p className="mt-2 text-xs text-gray-400">Temps cumulé (onglet actif, Page Visibility)</p>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && analytics && (analytics.deviceBreakdown || analytics.browserBreakdown) && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900">Tracking (appareil & navigateur)</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {analytics.deviceBreakdown && Object.keys(analytics.deviceBreakdown).length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <Smartphone className="h-5 w-5 text-gray-500" />
+                  <p className="text-sm font-medium text-gray-700">Par appareil</p>
+                </div>
+                <ul className="space-y-2">
+                  {Object.entries(analytics.deviceBreakdown)
+                    .filter(([, n]) => n > 0)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([device, count]) => (
+                      <li key={device} className="flex justify-between text-sm">
+                        <span className="capitalize text-gray-600">{device === 'iphone' ? 'iPhone' : device}</span>
+                        <span className="font-medium text-gray-900">{count}</span>
+                      </li>
+                    ))}
+                </ul>
+                {Object.values(analytics.deviceBreakdown).every((n) => n === 0) && (
+                  <p className="text-xs text-gray-400">Aucune donnée</p>
+                )}
+              </div>
+            )}
+            {analytics.browserBreakdown && Object.keys(analytics.browserBreakdown).length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <Monitor className="h-5 w-5 text-gray-500" />
+                  <p className="text-sm font-medium text-gray-700">Par navigateur</p>
+                </div>
+                <ul className="space-y-2">
+                  {Object.entries(analytics.browserBreakdown)
+                    .filter(([, n]) => n > 0)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([browser, count]) => (
+                      <li key={browser} className="flex justify-between text-sm">
+                        <span className="text-gray-600">{browser}</span>
+                        <span className="font-medium text-gray-900">{count}</span>
+                      </li>
+                    ))}
+                </ul>
+                {Object.values(analytics.browserBreakdown).every((n) => n === 0) && (
+                  <p className="text-xs text-gray-400">Aucune donnée</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

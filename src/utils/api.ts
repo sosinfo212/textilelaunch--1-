@@ -164,9 +164,15 @@ export const productsAPI = {
   },
 
   getAnalytics: async (productId: string) => {
-    return apiRequest<{ analytics: { uniqueClicks: number; totalOrders: number; totalTimeSpentSeconds: number } }>(
-      `/products/${productId}/analytics`
-    );
+    return apiRequest<{
+      analytics: {
+        uniqueClicks: number;
+        totalOrders: number;
+        totalTimeSpentSeconds: number;
+        deviceBreakdown?: Record<string, number>;
+        browserBreakdown?: Record<string, number>;
+      };
+    }>(`/products/${productId}/analytics`);
   },
 };
 
