@@ -144,10 +144,13 @@ export const productsAPI = {
     device?: string,
     browser?: string
   ) => {
-    return apiRequest<{ ok: boolean }>(`/products/${productId}/view`, {
+    const url = `${API_BASE_URL}/products/${productId}/view`;
+    return fetch(url, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'omit',
       body: JSON.stringify({ sessionId, device, browser }),
-    });
+    }).then((r) => (r.ok ? { ok: true } : Promise.reject(new Error(String(r.status)))));
   },
 
   recordLeave: async (
@@ -157,10 +160,13 @@ export const productsAPI = {
     device?: string,
     browser?: string
   ) => {
-    return apiRequest<{ ok: boolean }>(`/products/${productId}/view/leave`, {
+    const url = `${API_BASE_URL}/products/${productId}/view/leave`;
+    return fetch(url, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'omit',
       body: JSON.stringify({ sessionId, timeSpentSeconds, device, browser }),
-    });
+    }).then((r) => (r.ok ? { ok: true } : Promise.reject(new Error(String(r.status)))));
   },
 
   getAnalytics: async (productId: string) => {

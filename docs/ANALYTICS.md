@@ -77,3 +77,15 @@
    ```
 2. **Redeploy** so the frontend sends to `/api/analytics/events` and `/api/analytics/time`. Time is sent every 15s (heartbeat) while the tab is active, and on tab switch/leave.
 3. **Optional: use a tracking library** for maximum reliability (e.g. **PostHog** or **Umami**): they handle batching, retries, and mobile quirks. You can keep our backend for ownership and add a library in parallel, or replace with their API.
+
+## Troubleshooting: Visiteurs uniques stays at 0
+
+"Visiteurs uniques" comes from the **product_views** table. If CTA clicks and time work but unique visitors stay 0:
+
+1. **Create the table on the server** (run as MySQL user that can create tables, e.g. root):
+   ```bash
+   mysql -u root -p agency < database/add-product-views-table.sql
+   mysql -u root -p agency < database/add-product-views-device-browser.sql
+   ```
+2. **Redeploy** so the app uses the updated schema: `sudo bash update-server.sh`
+3. **Check in browser**: DevTools → Network → reload the product page. You should see `POST …/api/products/…/view` with status **200**. If you see **503**, the table is still missing or the DB user has no access.
