@@ -169,7 +169,14 @@ export const productsAPI = {
     }).then((r) => (r.ok ? { ok: true } : Promise.reject(new Error(String(r.status)))));
   },
 
-  getAnalytics: async (productId: string) => {
+  getAnalytics: async (
+    productId: string,
+    options?: { dateFrom?: string; dateTo?: string }
+  ) => {
+    const params = new URLSearchParams();
+    if (options?.dateFrom) params.set('dateFrom', options.dateFrom);
+    if (options?.dateTo) params.set('dateTo', options.dateTo);
+    const qs = params.toString();
     return apiRequest<{
       analytics: {
         uniqueClicks: number;
@@ -177,8 +184,11 @@ export const productsAPI = {
         totalTimeSpentSeconds: number;
         deviceBreakdown?: Record<string, number>;
         browserBreakdown?: Record<string, number>;
+        clickCount?: number;
+        totalTimeSpentSecondsFromEvents?: number;
       };
-    }>(`/products/${productId}/analytics`);
+      timeSeries?: { date: string; visitors: number; clicks: number; timeSpentSeconds: number; orders: number }[];
+    }>(`/products/${productId}/analytics${qs ? `?${qs}` : ''}`);
   },
 };
 

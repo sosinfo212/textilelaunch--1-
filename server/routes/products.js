@@ -306,33 +306,52 @@ router.post('/:id/view/leave', async (req, res) => {
 });
 
 // Get product analytics (auth, owner only). Includes tracking: device & browser breakdown.
+// Query: dateFrom, dateTo (YYYY-MM-DD) optional; when set, totals and timeSeries are filtered by date.
 router.get('/:id/analytics', authenticate, async (req, res) => {
   try {
     const userId = req.userId;
     const { id: productId } = req.params;
+    const { dateFrom, dateTo } = req.query || {};
     if (!userId) return res.status(401).json({ error: 'Authentication required' });
     const [products] = await db.execute('SELECT owner_id FROM products WHERE id = ?', [productId]);
     if (products.length === 0) return res.status(404).json({ error: 'Product not found' });
     if (products[0].owner_id !== userId) return res.status(403).json({ error: 'Not authorized' });
+
+    const fromDate = typeof dateFrom === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateFrom) ? dateFrom : null;
+    const toDate = typeof dateTo === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateTo) ? dateTo : null;
+    const hasDateRange = fromDate && toDate && fromDate <= toDate;
+
     let uniqueClicks = 0;
     let totalTimeSpentSeconds = 0;
     const deviceBreakdown = { android: 0, iphone: 0, computer: 0 };
     const browserBreakdown = {};
+    let timeSeries = [];
+    let clickCount = 0;
+    let totalTimeSpentFromEvents = 0;
+
+    const viewsWhere = hasDateRange
+      ? 'product_id = ? AND DATE(first_seen_at) >= ? AND DATE(first_seen_at) <= ?'
+      : 'product_id = ?';
+    const viewsParams = hasDateRange ? [productId, fromDate, toDate] : [productId];
 
     try {
       const [views] = await db.execute(
-        'SELECT COUNT(*) AS cnt, COALESCE(SUM(time_spent_seconds), 0) AS total FROM product_views WHERE product_id = ?',
-        [productId]
+        `SELECT COUNT(*) AS cnt, COALESCE(SUM(time_spent_seconds), 0) AS total FROM product_views WHERE ${viewsWhere}`,
+        viewsParams
       );
       if (views.length) {
         uniqueClicks = Number(views[0].cnt) || 0;
         totalTimeSpentSeconds = Number(views[0].total) || 0;
       }
 
+      const deviceWhere = hasDateRange
+        ? 'product_id = ? AND device IS NOT NULL AND device != "" AND DATE(first_seen_at) >= ? AND DATE(first_seen_at) <= ? GROUP BY device'
+        : 'product_id = ? AND device IS NOT NULL AND device != "" GROUP BY device';
+      const deviceParams = hasDateRange ? [productId, fromDate, toDate] : [productId];
       try {
         const [byDevice] = await db.execute(
-          'SELECT device, COUNT(*) AS cnt FROM product_views WHERE product_id = ? AND device IS NOT NULL AND device != "" GROUP BY device',
-          [productId]
+          `SELECT device, COUNT(*) AS cnt FROM product_views WHERE ${deviceWhere}`,
+          deviceParams
         );
         for (const row of byDevice) {
           const d = (row.device || '').toLowerCase().trim() || 'unknown';
@@ -342,10 +361,14 @@ router.get('/:id/analytics', authenticate, async (req, res) => {
         if (e.code !== 'ER_BAD_FIELD_ERROR') throw e;
       }
 
+      const browserWhere = hasDateRange
+        ? 'product_id = ? AND browser IS NOT NULL AND browser != "" AND DATE(first_seen_at) >= ? AND DATE(first_seen_at) <= ? GROUP BY browser'
+        : 'product_id = ? AND browser IS NOT NULL AND browser != "" GROUP BY browser';
+      const browserParams = hasDateRange ? [productId, fromDate, toDate] : [productId];
       try {
         const [byBrowser] = await db.execute(
-          'SELECT browser, COUNT(*) AS cnt FROM product_views WHERE product_id = ? AND browser IS NOT NULL AND browser != "" GROUP BY browser',
-          [productId]
+          `SELECT browser, COUNT(*) AS cnt FROM product_views WHERE ${browserWhere}`,
+          browserParams
         );
         for (const row of byBrowser) {
           const b = (row.browser || 'Unknown').trim() || 'Unknown';
@@ -354,17 +377,75 @@ router.get('/:id/analytics', authenticate, async (req, res) => {
       } catch (e) {
         if (e.code !== 'ER_BAD_FIELD_ERROR') throw e;
       }
+
+      if (hasDateRange) {
+        try {
+          const [evClicks] = await db.execute(
+            "SELECT COUNT(*) AS cnt FROM analytics_events WHERE product_id = ? AND event_type = 'cta_click' AND created_at >= ? AND created_at < DATE(?) + INTERVAL 1 DAY",
+            [productId, fromDate, toDate]
+          );
+          if (evClicks.length) clickCount = Number(evClicks[0].cnt) || 0;
+          const [evTime] = await db.execute(
+            "SELECT COALESCE(SUM(event_value), 0) AS total FROM analytics_events WHERE product_id = ? AND event_type = 'time_spent' AND created_at >= ? AND created_at < DATE(?) + INTERVAL 1 DAY",
+            [productId, fromDate, toDate]
+          );
+          if (evTime.length) totalTimeSpentFromEvents = Number(evTime[0].total) || 0;
+        } catch (e) {
+          if (e.code !== 'ER_NO_SUCH_TABLE') throw e;
+        }
+      }
+
+      if (hasDateRange) {
+        const [viewsByDay] = await db.execute(
+          'SELECT DATE(first_seen_at) AS d, COUNT(*) AS visitors, COALESCE(SUM(time_spent_seconds), 0) AS time_sec FROM product_views WHERE product_id = ? AND first_seen_at >= ? AND first_seen_at < DATE(?) + INTERVAL 1 DAY GROUP BY DATE(first_seen_at) ORDER BY d',
+          [productId, fromDate, toDate]
+        ).catch(() => [[]]);
+        const [clicksByDay] = await db.execute(
+          "SELECT DATE(created_at) AS d, COUNT(*) AS clicks FROM analytics_events WHERE product_id = ? AND event_type = 'cta_click' AND created_at >= ? AND created_at < DATE(?) + INTERVAL 1 DAY GROUP BY DATE(created_at) ORDER BY d",
+          [productId, fromDate, toDate]
+        ).catch(() => [[]]);
+        const [ordersByDay] = await db.execute(
+          'SELECT DATE(created_at) AS d, COUNT(*) AS orders FROM orders WHERE product_id = ? AND created_at >= ? AND created_at < DATE(?) + INTERVAL 1 DAY GROUP BY DATE(created_at) ORDER BY d',
+          [productId, fromDate, toDate]
+        ).catch(() => [[]]);
+
+        const dayMap = {};
+        const from = new Date(fromDate + 'T00:00:00Z');
+        const to = new Date(toDate + 'T23:59:59Z');
+        for (let t = from.getTime(); t <= to.getTime(); t += 86400000) {
+          const key = new Date(t).toISOString().slice(0, 10);
+          dayMap[key] = { date: key, visitors: 0, clicks: 0, timeSpentSeconds: 0, orders: 0 };
+        }
+        for (const row of viewsByDay) {
+          const key = row.d ? String(row.d).slice(0, 10) : null;
+          if (key && dayMap[key]) {
+            dayMap[key].visitors = Number(row.visitors) || 0;
+            dayMap[key].timeSpentSeconds = Number(row.time_sec) || 0;
+          }
+        }
+        for (const row of clicksByDay) {
+          const key = row.d ? String(row.d).slice(0, 10) : null;
+          if (key && dayMap[key]) dayMap[key].clicks = Number(row.clicks) || 0;
+        }
+        for (const row of ordersByDay) {
+          const key = row.d ? String(row.d).slice(0, 10) : null;
+          if (key && dayMap[key]) dayMap[key].orders = Number(row.orders) || 0;
+        }
+        timeSeries = Object.keys(dayMap).sort().map((k) => dayMap[k]);
+      }
     } catch (e) {
       if (e.code !== 'ER_NO_SUCH_TABLE') throw e;
     }
 
+    const ordersWhere = hasDateRange ? 'product_id = ? AND DATE(created_at) >= ? AND DATE(created_at) <= ?' : 'product_id = ?';
+    const ordersParams = hasDateRange ? [productId, fromDate, toDate] : [productId];
     const [orderCount] = await db.execute(
-      'SELECT COUNT(*) AS cnt FROM orders WHERE product_id = ?',
-      [productId]
+      `SELECT COUNT(*) AS cnt FROM orders WHERE ${ordersWhere}`,
+      ordersParams
     );
     const totalOrders = orderCount.length ? Number(orderCount[0].cnt) || 0 : 0;
 
-    res.json({
+    const payload = {
       analytics: {
         uniqueClicks,
         totalOrders,
@@ -372,7 +453,14 @@ router.get('/:id/analytics', authenticate, async (req, res) => {
         deviceBreakdown,
         browserBreakdown,
       },
-    });
+    };
+    if (hasDateRange) {
+      payload.analytics.clickCount = clickCount;
+      payload.analytics.totalTimeSpentSecondsFromEvents = Math.round(totalTimeSpentFromEvents);
+    }
+    if (timeSeries.length) payload.timeSeries = timeSeries;
+
+    res.json(payload);
   } catch (err) {
     console.error('Get analytics error:', err);
     res.status(500).json({ error: 'Internal server error' });
