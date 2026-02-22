@@ -513,6 +513,10 @@ export const ProductLanding: React.FC = () => {
 
   // 1. Check for Custom Template (Legacy Builder)
   if (product.landingPageTemplateId && template) {
+          // Code templates: sticky CTA only when template includes {sticky_cta}. No hardcoded bar.
+          const isCodeTemplate = template.mode === 'code';
+          const showFallbackStickyCta = !isCodeTemplate; // visual mode: keep legacy sticky bar
+
           return (
               <div className="min-h-screen bg-white font-cairo" dir="rtl">
                   <main className="w-full">
@@ -525,20 +529,24 @@ export const ProductLanding: React.FC = () => {
                       />
                   </main>
 
-                  {/* Sticky Mobile CTA for Template Mode */}
-                  <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 flex items-center gap-4">
-                      <div className="flex-1">
-                         <div className="text-xs text-gray-500 mb-1">السعر الإجمالي:</div>
-                         <div className="text-xl font-black text-red-600">{formatPrice(product.price, product.currency)}</div>
+                  {/* Sticky CTA: only for visual-mode templates. Code templates use {sticky_cta} in HTML. */}
+                  {showFallbackStickyCta && (
+                    <>
+                      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 flex items-center gap-4">
+                          <div className="flex-1">
+                             <div className="text-xs text-gray-500 mb-1">السعر الإجمالي:</div>
+                             <div className="text-xl font-black text-red-600">{formatPrice(product.price * quantity, product.currency)}</div>
+                          </div>
+                          <button 
+                            onClick={() => { trackClick('cta_click'); scrollToForm(); }}
+                            className="flex-1 bg-red-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center animate-pulse"
+                          >
+                             اطلب الآن
+                          </button>
                       </div>
-                      <button 
-                        onClick={() => { trackClick('cta_click'); scrollToForm(); }}
-                        className="flex-1 bg-red-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center animate-pulse"
-                      >
-                         اطلب الآن
-                      </button>
-                  </div>
-                  <div className="h-24"></div>
+                      <div className="h-24"></div>
+                    </>
+                  )}
               </div>
           );
   }
