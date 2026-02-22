@@ -107,9 +107,12 @@ router.post('/', authenticate, async (req, res) => {
     res.status(201).json({ template: formatTemplate(templates[0]) });
   } catch (error) {
     console.error('Create template error:', error.message || error, error.stack);
-    const msg = process.env.NODE_ENV === 'production'
+    let msg = process.env.NODE_ENV === 'production'
       ? 'Internal server error'
       : (error.message || String(error));
+    if (msg.includes('Incorrect string value') && msg.includes('html_code')) {
+      msg = 'Template content contains special characters (e.g. ★). Run database/fix-landing-page-templates-html-code-utf8.sql on the DB to fix.';
+    }
     res.status(500).json({ error: msg });
   }
 });

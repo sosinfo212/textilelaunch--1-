@@ -68,7 +68,8 @@ mysql -u ${DB_USER} -p${DB_PASSWORD} -h 127.0.0.1 ${DB_NAME} <<EOF
 SET FOREIGN_KEY_CHECKS=0;
 
 ALTER TABLE landing_page_templates 
-  MODIFY name VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+  MODIFY name VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  MODIFY html_code TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL;
 
 ALTER TABLE landing_page_templates DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
