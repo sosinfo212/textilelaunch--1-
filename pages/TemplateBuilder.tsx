@@ -8,14 +8,23 @@ import {
 import { LandingPageRenderer } from '../components/LandingPageRenderer';
 
 const AVAILABLE_TAGS = [
+    { tag: '{notification_bar}', desc: 'Bandeau sticky (livraison gratuite, COD)' },
+    { tag: '{breadcrumb}', desc: 'Fil d’Ariane (Accueil / Produit)' },
     { tag: '{product_name}', desc: 'Nom du produit' },
     { tag: '{product_price}', desc: 'Prix de vente' },
     { tag: '{product_regular_price}', desc: 'Prix barré' },
-    { tag: '{product_description}', desc: 'Description complète' },
-    { tag: '{product_image_0}', desc: 'URL Image 1' },
-    { tag: '{product_image_carousel}', desc: 'Galerie Images avec Miniatures' },
-    { tag: '{attributes_selector}', desc: 'Sélecteur Variantes (Radio)' },
-    { tag: '{order_form}', desc: 'Formulaire de commande complet' },
+    { tag: '{product_price_block}', desc: 'Bloc prix + ancien prix (si défini)' },
+    { tag: '{product_sku}', desc: 'SKU (si affiché)' },
+    { tag: '{product_image_0}', desc: 'URL image 1' },
+    { tag: '{product_image_carousel}', desc: 'Galerie avec miniatures (images + vidéos)' },
+    { tag: '{attributes_selector}', desc: 'Sélecteur variantes (taille, couleur…)' },
+    { tag: '{quantity_selector}', desc: 'Sélecteur quantité (+ / −)' },
+    { tag: '{payment_selector}', desc: 'Choix COD / Paiement en ligne (si les deux activés)' },
+    { tag: '{order_form}', desc: 'Formulaire (nom, tél, ville, adresse + bouton)' },
+    { tag: '{trust_badges}', desc: 'Badges confiance (livraison, paiement)' },
+    { tag: '{product_description}', desc: 'Description brute (HTML ou texte)' },
+    { tag: '{product_description_section}', desc: 'Section « Description » avec titre' },
+    { tag: '{sticky_cta}', desc: 'Barre fixe bas (total + bouton « Commander »)' },
 ];
 
 const DEFAULT_CODE_BOILERPLATE = `

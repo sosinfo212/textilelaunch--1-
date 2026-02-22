@@ -476,12 +476,16 @@ export const ProductLanding: React.FC = () => {
       formData, setFormData,
       selectedAttributes, handleAttributeChange,
       handleSubmit,
-      formError, // Pass error state to renderer
+      formError,
       images: product.images,
-      currentImageIndex: currentMediaIndex, 
+      currentImageIndex: currentMediaIndex,
       setCurrentImageIndex: setCurrentMediaIndex,
       prevImage: () => setCurrentMediaIndex((prev) => (prev === 0 ? media.length - 1 : prev - 1)),
-      nextImage: () => setCurrentMediaIndex((prev) => (prev + 1) % media.length)
+      nextImage: () => setCurrentMediaIndex((prev) => (prev + 1) % media.length),
+      quantity,
+      setQuantity,
+      paymentMethod,
+      setPaymentMethod,
   };
 
   // Ensure attributes is an array to avoid crashes

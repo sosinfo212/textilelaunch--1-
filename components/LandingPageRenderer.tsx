@@ -14,12 +14,16 @@ interface RendererProps {
         selectedAttributes: any;
         handleAttributeChange: any;
         handleSubmit: any;
-        formError?: string; // Add error prop
+        formError?: string;
         images: string[];
         currentImageIndex: number;
         setCurrentImageIndex: any;
         prevImage: any;
         nextImage: any;
+        quantity?: number;
+        setQuantity?: (n: number | ((prev: number) => number)) => void;
+        paymentMethod?: 'cod' | 'stripe';
+        setPaymentMethod?: (m: 'cod' | 'stripe') => void;
     };
 }
 
@@ -299,7 +303,7 @@ export const LandingPageRenderer: React.FC<RendererProps> = ({
 const CustomCodeRenderer: React.FC<{ htmlCode: string; product: Product; formState: any }> = ({ htmlCode, product, formState }) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // 1. Process Tags
+    // 1. Process simple tags
     let processedHtml = htmlCode
         .replace(/{product_name}/g, product.name)
         .replace(/{product_price}/g, formatPrice(product.price, product.currency))
@@ -310,6 +314,35 @@ const CustomCodeRenderer: React.FC<{ htmlCode: string; product: Product; formSta
         .replace(/{product_image_1}/g, product.images[1] || '')
         .replace(/{product_image_2}/g, product.images[2] || '')
         .replace(/{product_image_3}/g, product.images[3] || '');
+
+    // --- Component shortcodes (build your own layout) ---
+    const notificationBarHtml = `<div class="tl-notification-bar bg-red-600 text-white text-center py-2 px-4 text-sm sm:text-base font-bold sticky top-0 z-50 shadow-md" dir="rtl">🚚 التوصيل بالمجان على جميع المنتجات - والدفع عند الاستلام</div>`;
+    processedHtml = processedHtml.replace(/{notification_bar}/g, notificationBarHtml);
+
+    const breadcrumbHtml = `<div class="tl-breadcrumb bg-gray-50 border-b border-gray-200 py-3" dir="rtl"><div class="max-w-7xl mx-auto px-4 flex items-center text-sm text-gray-500"><a href="/" class="hover:text-gray-700">الرئيسية</a><span class="mx-2">/</span><span class="text-gray-900 font-medium truncate">${product.name}</span></div></div>`;
+    processedHtml = processedHtml.replace(/{breadcrumb}/g, breadcrumbHtml);
+
+    const priceBlockHtml = `<div class="tl-product-price-block flex items-center gap-4" dir="rtl"><span class="text-3xl font-black text-red-600">${formatPrice(product.price, product.currency)}</span>${product.regularPrice && product.regularPrice > product.price ? `<span class="text-lg text-gray-400 line-through">${formatPrice(product.regularPrice, product.currency)}</span>` : ''}</div>`;
+    processedHtml = processedHtml.replace(/{product_price_block}/g, priceBlockHtml);
+
+    const qty = typeof formState.quantity === 'number' ? formState.quantity : 1;
+    const quantitySelectorHtml = `<div class="tl-quantity-selector flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200" dir="rtl"><span class="font-bold text-gray-700">الكمية:</span><div class="flex items-center gap-4"><button type="button" class="tl-qty-minus w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-red-600">−</button><span class="tl-qty-value font-black text-xl w-6 text-center">${qty}</span><button type="button" class="tl-qty-plus w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-green-600">+</button></div></div>`;
+    processedHtml = processedHtml.replace(/{quantity_selector}/g, quantitySelectorHtml);
+
+    const payOpts = (product as any).paymentOptions || 'cod_only';
+    const isStripe = formState.paymentMethod === 'stripe';
+    const paymentSelectorHtml = payOpts === 'both' ? `<div class="tl-payment-selector" dir="rtl"><label class="block text-sm font-bold text-gray-700 mb-2">طريقة الدفع</label><div class="flex gap-3"><label class="tl-pay-cod flex-1 cursor-pointer px-4 py-3 rounded-lg border-2 text-sm font-bold transition-all ${!isStripe ? 'border-red-600 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-600'}"><input type="radio" name="tl-pay-method" value="cod" class="sr-only" ${!isStripe ? 'checked' : ''}> دفع عند الاستلام (COD)</label><label class="tl-pay-stripe flex-1 cursor-pointer px-4 py-3 rounded-lg border-2 text-sm font-bold transition-all ${isStripe ? 'border-red-600 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-600'}"><input type="radio" name="tl-pay-method" value="stripe" class="sr-only" ${isStripe ? 'checked' : ''}> دفع عبر الإنترنت</label></div></div>` : '';
+    processedHtml = processedHtml.replace(/{payment_selector}/g, paymentSelectorHtml);
+
+    const trustBadgesHtml = `<div class="tl-trust-badges grid grid-cols-2 gap-4" dir="rtl"><div class="flex items-center gap-3 bg-white p-3 rounded-xl border border-gray-100 shadow-sm"><div class="bg-green-100 p-2 rounded-full text-green-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg></div><div class="text-xs font-bold text-gray-700">توصيل سريع<br/>لجميع المدن</div></div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border border-gray-100 shadow-sm"><div class="bg-blue-100 p-2 rounded-full text-blue-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div><div class="text-xs font-bold text-gray-700">الدفع عند<br/>الاستلام</div></div></div>`;
+    processedHtml = processedHtml.replace(/{trust_badges}/g, trustBadgesHtml);
+
+    const descSectionHtml = `<div class="tl-product-description-section mt-12 bg-gray-50 p-6 sm:p-8 rounded-xl border border-gray-100 shadow-sm" dir="rtl"><h3 class="text-2xl font-bold mb-6 text-gray-800 border-b border-gray-200 pb-4">وصف المنتج</h3><div class="prose prose-lg max-w-none text-gray-600 leading-relaxed font-cairo">${product.description}</div></div>`;
+    processedHtml = processedHtml.replace(/{product_description_section}/g, descSectionHtml);
+
+    const totalPrice = formatPrice(product.price * qty, product.currency);
+    const stickyCtaHtml = `<div class="tl-sticky-cta fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-40 flex items-center gap-4" dir="rtl"><div class="flex-1"><div class="text-xs text-gray-500 mb-1">السعر الإجمالي:</div><div class="text-xl font-black text-red-600 tl-total-price">${totalPrice}</div></div><button type="button" class="tl-scroll-to-form flex-1 bg-red-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg">اطلب الآن</button></div><div class="tl-sticky-cta-spacer h-24"></div>`;
+    processedHtml = processedHtml.replace(/{sticky_cta}/g, stickyCtaHtml);
 
     // Combine images and videos
     const allMedia: Array<{ type: 'image' | 'video'; src: string }> = [];
@@ -396,14 +429,14 @@ const CustomCodeRenderer: React.FC<{ htmlCode: string; product: Product; formSta
 
     processedHtml = processedHtml.replace(/{attributes_selector}/g, attributesHtml);
 
-    // 3. Generate Simple Form Placeholder if user uses {order_form}
+    // 3. Generate order form (wrapped in container for scroll target)
     const defaultFormHtml = `
-        <div class="space-y-4">
+        <div id="order-form-container" class="tl-order-form space-y-4">
             <input type="text" id="tl-full-name" placeholder="الاسم الكامل" class="w-full p-3 border rounded-lg text-right bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none" required>
             <input type="tel" id="tl-phone" placeholder="رقم الهاتف" class="w-full p-3 border rounded-lg text-right bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none" required>
             <input type="text" id="tl-city" placeholder="المدينة" class="w-full p-3 border rounded-lg text-right bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none" required>
             <input type="text" id="tl-address" placeholder="العنوان" class="w-full p-3 border rounded-lg text-right bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none" required>
-            <button id="tl-btn-submit" class="w-full bg-blue-600 text-white p-4 font-bold rounded-xl hover:bg-blue-700 transition shadow-lg transform hover:scale-[1.02] active:scale-95">تأكيد الطلب</button>
+            <button type="button" id="tl-btn-submit" class="w-full bg-blue-600 text-white p-4 font-bold rounded-xl hover:bg-blue-700 transition shadow-lg transform hover:scale-[1.02] active:scale-95">تأكيد الطلب</button>
         </div>
     `;
     processedHtml = processedHtml.replace(/{order_form}/g, defaultFormHtml);
@@ -542,12 +575,49 @@ const CustomCodeRenderer: React.FC<{ htmlCode: string; product: Product; formSta
         };
         container.addEventListener('change', handleAttrChange);
 
+        // Quantity selector
+        const qtyMinus = container.querySelector('.tl-qty-minus');
+        const qtyPlus = container.querySelector('.tl-qty-plus');
+        const setQty = formState.setQuantity;
+        const onQtyMinus = () => setQty?.((prev: number) => Math.max(1, prev - 1));
+        const onQtyPlus = () => setQty?.((prev: number) => prev + 1);
+        qtyMinus?.addEventListener('click', onQtyMinus);
+        qtyPlus?.addEventListener('click', onQtyPlus);
+
+        // Payment selector
+        const payRadios = container.querySelectorAll('input[name="tl-pay-method"]');
+        const payCodLabel = container.querySelector('.tl-pay-cod');
+        const payStripeLabel = container.querySelector('.tl-pay-stripe');
+        const setPay = formState.setPaymentMethod;
+        const updatePayDisplay = () => {
+            const isStripe = formState.paymentMethod === 'stripe';
+            payCodLabel?.classList.toggle('border-red-600', !isStripe); payCodLabel?.classList.toggle('bg-red-50', !isStripe); payCodLabel?.classList.toggle('text-red-700', !isStripe);
+            payCodLabel?.classList.toggle('border-gray-200', isStripe); payCodLabel?.classList.toggle('bg-white', isStripe); payCodLabel?.classList.toggle('text-gray-600', isStripe);
+            payStripeLabel?.classList.toggle('border-red-600', isStripe); payStripeLabel?.classList.toggle('bg-red-50', isStripe); payStripeLabel?.classList.toggle('text-red-700', isStripe);
+            payStripeLabel?.classList.toggle('border-gray-200', !isStripe); payStripeLabel?.classList.toggle('bg-white', !isStripe); payStripeLabel?.classList.toggle('text-gray-600', !isStripe);
+        };
+        const onPayChange = (e: Event) => {
+            const v = (e.target as HTMLInputElement).value as 'cod' | 'stripe';
+            setPay?.(v);
+            updatePayDisplay();
+        };
+        payRadios.forEach((radio) => radio.addEventListener('change', onPayChange));
+
+        // Scroll to form (sticky CTA button)
+        const scrollBtn = container.querySelector('.tl-scroll-to-form');
+        const onScrollToForm = () => document.getElementById('order-form-container')?.scrollIntoView({ behavior: 'smooth' });
+        scrollBtn?.addEventListener('click', onScrollToForm);
+
         return () => {
             Object.values(inputs).forEach(input => input?.removeEventListener('input', updateForm));
             submitBtn?.removeEventListener('click', handleSubmitClick);
             container.removeEventListener('change', handleAttrChange);
+            qtyMinus?.removeEventListener('click', onQtyMinus);
+            qtyPlus?.removeEventListener('click', onQtyPlus);
+            payRadios.forEach((r) => r.removeEventListener('change', onPayChange));
+            scrollBtn?.removeEventListener('click', onScrollToForm);
         };
-    }, [htmlCode, formState.formData]);
+    }, [htmlCode, formState.formData, formState.quantity, formState.paymentMethod]);
 
     return <div ref={containerRef} dangerouslySetInnerHTML={{ __html: processedHtml }} />;
 };
