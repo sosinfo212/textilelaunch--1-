@@ -13,13 +13,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const isAnalyticsPage = location.pathname.endsWith('/analytics');
   const isLandingPage = location.pathname.startsWith('/product/') && !isAnalyticsPage;
   const isLoginPage = location.pathname === '/login';
+  const isAffiliateConnectBridge = location.pathname === '/integrations/affiliate/connect';
 
   const handleLogout = () => {
       logout();
       navigate('/login');
   };
 
-  if (isLandingPage || isLoginPage) {
+  if (isLandingPage || isLoginPage || isAffiliateConnectBridge) {
     return <main className="min-h-screen bg-gray-50">{children}</main>;
   }
 

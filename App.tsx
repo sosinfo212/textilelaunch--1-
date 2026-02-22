@@ -14,6 +14,8 @@ import { CategoryList } from './pages/CategoryList';
 import { LoginPage } from './pages/LoginPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ProductAnalyticsPage } from './pages/ProductAnalyticsPage';
+import { AffiliateIntegrationsPage } from './pages/AffiliateIntegrationsPage';
+import { AffiliateConnectBridge } from './pages/AffiliateConnectBridge';
 
 // Lazy-load landing page so product/:id only loads this chunk (reduces initial JS)
 const ProductLanding = lazy(() => import('./pages/ProductLanding').then(m => ({ default: m.ProductLanding })));
@@ -58,6 +60,8 @@ function App() {
               <Route path="/templates" element={<RequireAuth><TemplateList /></RequireAuth>} />
               <Route path="/builder/:templateId" element={<RequireAuth><TemplateBuilder /></RequireAuth>} />
               <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
+              <Route path="/integrations/affiliate" element={<RequireAuth><AffiliateIntegrationsPage /></RequireAuth>} />
+              <Route path="/integrations/affiliate/connect" element={<AffiliateConnectBridge />} />
             </Routes>
             </Suspense>
           </Layout>

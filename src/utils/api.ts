@@ -355,3 +355,29 @@ export const geminiAPI = {
     });
   },
 };
+
+// Integrations API (affiliate networks)
+export const integrationsAPI = {
+  getAffiliateConnections: async () => {
+    return apiRequest<{ connections: { id: string; name: string; loginUrl: string; createdAt: string }[] }>('/integrations/affiliate');
+  },
+  saveAffiliateConnection: async (data: { id?: string; name: string; loginUrl: string; email: string; password: string }) => {
+    return apiRequest<{ connection: { id: string; name: string; loginUrl: string; createdAt: string } }>('/integrations/affiliate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  deleteAffiliateConnection: async (id: string) => {
+    return apiRequest<{ success: boolean }>(`/integrations/affiliate/${id}`, { method: 'DELETE' });
+  },
+  createAffiliateLaunchUrl: async (connectionId: string) => {
+    const data = await apiRequest<{ launchUrl: string }>(`/integrations/affiliate/${connectionId}/launch`, { method: 'POST' });
+    return data.launchUrl;
+  },
+  getLaunchCredentials: async (token: string) => {
+    const url = `${API_BASE_URL}/integrations/affiliate/launch?token=${encodeURIComponent(token)}`;
+    const res = await fetch(url, { credentials: 'omit' });
+    if (!res.ok) throw new Error('Invalid or expired link');
+    return res.json() as Promise<{ loginUrl: string; email: string; password: string; loginFieldName?: string; passwordFieldName?: string }>;
+  },
+};

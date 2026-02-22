@@ -28,6 +28,7 @@
    mysql -u textilelaunch_db -p agency < /opt/textilelaunch/database/add-analytics-events-table.sql
    mysql -u textilelaunch_db -p agency < /opt/textilelaunch/database/add-product-views-table.sql
    mysql -u textilelaunch_db -p agency < /opt/textilelaunch/database/add-product-views-device-browser.sql
+   mysql -u textilelaunch_db -p agency < /opt/textilelaunch/database/add-affiliate-integrations.sql
    ```
    Use the same DB user/password as in `fix-database.sh` / `.env`.
 

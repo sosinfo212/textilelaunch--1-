@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
-import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image, ExternalLink } from 'lucide-react';
 import { User as UserType } from '../types';
 
 export const SettingsPage: React.FC = () => {
@@ -212,6 +213,16 @@ src='https://www.facebook.com/tr?id=YOUR_PIXEL_ID&ev=PageView&noscript=1'
                                 </p>
                             </div>
 
+                            <div className="pt-4 border-t border-gray-200 mt-6">
+                                <p className="text-sm text-gray-600 mb-2">Réseau d'affiliation</p>
+                                <Link
+                                    to="/integrations/affiliate"
+                                    className="inline-flex items-center text-brand-600 hover:text-brand-700 text-sm font-medium mb-4"
+                                >
+                                    <ExternalLink size={16} className="mr-1" />
+                                    Connecter Azome Affiliate (ou autre plateforme)
+                                </Link>
+                            </div>
                             <div className="pt-4">
                                 <button
                                     type="submit"
