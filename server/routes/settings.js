@@ -20,7 +20,7 @@ router.get('/', authenticate, async (req, res) => {
 
     // Select specific columns to avoid issues if pixel columns don't exist yet
     const [settings] = await db.execute(
-      'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code, COALESCE(tiktok_pixel_code, "") as tiktok_pixel_code FROM app_settings WHERE user_id = ?',
+      'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code, COALESCE(tiktok_pixel_code, "") as tiktok_pixel_code, COALESCE(stripe_publishable_key, "") as stripe_publishable_key, COALESCE(stripe_secret_key, "") as stripe_secret_key FROM app_settings WHERE user_id = ?',
       [userId]
     );
 
@@ -32,7 +32,7 @@ router.get('/', authenticate, async (req, res) => {
       );
       
       const [newSettings] = await db.execute(
-        'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code, COALESCE(tiktok_pixel_code, "") as tiktok_pixel_code FROM app_settings WHERE user_id = ?',
+        'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code, COALESCE(tiktok_pixel_code, "") as tiktok_pixel_code, COALESCE(stripe_publishable_key, "") as stripe_publishable_key, COALESCE(stripe_secret_key, "") as stripe_secret_key FROM app_settings WHERE user_id = ?',
         [userId]
       );
       
@@ -74,7 +74,7 @@ router.put('/', authenticate, async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { shopName, logoUrl, geminiApiKey, facebookPixelCode, tiktokPixelCode } = req.body;
+    const { shopName, logoUrl, geminiApiKey, facebookPixelCode, tiktokPixelCode, stripePublishableKey, stripeSecretKey } = req.body;
     
     console.log(`[Settings] Update request for userId: ${userId}`);
     console.log(`[Settings] Received data:`, {
@@ -122,6 +122,14 @@ router.put('/', authenticate, async (req, res) => {
         updates.push('tiktok_pixel_code = ?');
         values.push(tiktokPixelCode);
       }
+      if (stripePublishableKey !== undefined) {
+        updates.push('stripe_publishable_key = ?');
+        values.push(stripePublishableKey);
+      }
+      if (stripeSecretKey !== undefined) {
+        updates.push('stripe_secret_key = ?');
+        values.push(stripeSecretKey);
+      }
 
       if (updates.length > 0) {
         values.push(userId);
@@ -154,15 +162,15 @@ router.get('/:userId', async (req, res) => {
     const { userId } = req.params;
     console.log(`[Settings] Fetching public settings for userId: ${userId}`);
     
-    // Select specific columns to avoid issues if pixel columns don't exist yet
+    // Select specific columns (include stripe_publishable_key for Stripe.js on landing)
     const [settings] = await db.execute(
-      'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code, COALESCE(tiktok_pixel_code, "") as tiktok_pixel_code FROM app_settings WHERE user_id = ?',
+      'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code, COALESCE(tiktok_pixel_code, "") as tiktok_pixel_code, COALESCE(stripe_publishable_key, "") as stripe_publishable_key FROM app_settings WHERE user_id = ?',
       [userId]
     );
 
     if (settings.length === 0) {
       console.log(`[Settings] No settings found for userId: ${userId}, returning defaults`);
-      return res.json({ settings: formatSettings({ user_id: userId, shop_name: 'Trendy Cosmetix Store', logo_url: '', gemini_api_key: '', facebook_pixel_code: '', tiktok_pixel_code: '' }) });
+      return res.json({ settings: formatSettings({ user_id: userId, shop_name: 'Trendy Cosmetix Store', logo_url: '', gemini_api_key: '', facebook_pixel_code: '', tiktok_pixel_code: '', stripe_publishable_key: '' }) });
     }
 
     const formatted = formatSettings(settings[0]);
@@ -202,7 +210,9 @@ function formatSettings(row) {
     logoUrl: row.logo_url || '',
     geminiApiKey: row.gemini_api_key || '',
     facebookPixelCode: row.facebook_pixel_code || '',
-    tiktokPixelCode: row.tiktok_pixel_code || ''
+    tiktokPixelCode: row.tiktok_pixel_code || '',
+    stripePublishableKey: row.stripe_publishable_key || '',
+    stripeSecretKey: row.stripe_secret_key || ''
   };
 }
 

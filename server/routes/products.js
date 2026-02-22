@@ -92,7 +92,8 @@ router.post('/', authenticate, async (req, res) => {
       attributes,
       category,
       supplier,
-      landingPageTemplateId
+      landingPageTemplateId,
+      paymentOptions
     } = req.body;
 
     if (!name || price === undefined || price === null) {
@@ -113,16 +114,17 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Invalid price' });
     }
 
+    const payOpts = ['cod_only', 'stripe_only', 'both'].includes(paymentOptions) ? paymentOptions : 'cod_only';
     await db.execute(
       `INSERT INTO products (
         id, owner_id, name, description, price, regular_price, currency, sku, show_sku,
-        images, videos, attributes, category, supplier, landing_page_template_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        images, videos, attributes, category, supplier, landing_page_template_id, payment_options
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, userId, name, description || '', priceNum, regularPriceNum, currency || 'MAD',
         sku || null, showSku ? 1 : 0,
         imagesJson, videosJson, attributesJson, category || null, supplier || null,
-        landingPageTemplateId || null
+        landingPageTemplateId || null, payOpts
       ]
     );
 
@@ -176,25 +178,34 @@ router.put('/:id', authenticate, async (req, res) => {
       attributes,
       category,
       supplier,
-      landingPageTemplateId
+      landingPageTemplateId,
+      paymentOptions
     } = req.body;
 
     const imagesJson = JSON.stringify(images || []);
     const videosJson = JSON.stringify(videos || []);
     const attributesJson = JSON.stringify(attributes || []);
+    const payOpts = ['cod_only', 'stripe_only', 'both'].includes(paymentOptions) ? paymentOptions : undefined;
 
+    const updates = [
+      'name = ?', 'description = ?', 'price = ?', 'regular_price = ?', 'currency = ?', 'sku = ?', 'show_sku = ?',
+      'images = ?', 'videos = ?', 'attributes = ?', 'category = ?', 'supplier = ?',
+      'landing_page_template_id = ?'
+    ];
+    const values = [
+      name, description || '', price, regularPrice || null, currency || 'MAD',
+      sku || null, showSku ? 1 : 0,
+      imagesJson, videosJson, attributesJson, category || null, supplier || null,
+      landingPageTemplateId || null
+    ];
+    if (payOpts) {
+      updates.push('payment_options = ?');
+      values.push(payOpts);
+    }
+    values.push(id);
     await db.execute(
-      `UPDATE products SET 
-        name = ?, description = ?, price = ?, regular_price = ?, currency = ?, sku = ?, show_sku = ?,
-        images = ?, videos = ?, attributes = ?, category = ?, supplier = ?,
-        landing_page_template_id = ?
-      WHERE id = ?`,
-      [
-        name, description || '', price, regularPrice || null, currency || 'MAD',
-        sku || null, showSku ? 1 : 0,
-        imagesJson, videosJson, attributesJson, category || null, supplier || null,
-        landingPageTemplateId || null, id
-      ]
+      `UPDATE products SET ${updates.join(', ')} WHERE id = ?`,
+      values
     );
 
     const [products] = await db.execute(
@@ -539,6 +550,7 @@ function formatProduct(row) {
     category: row.category || undefined,
     supplier: row.supplier || undefined,
     landingPageTemplateId: row.landing_page_template_id || undefined,
+    paymentOptions: row.payment_options || 'cod_only',
     createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now()
   };
 }

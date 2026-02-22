@@ -394,3 +394,21 @@ export const integrationsAPI = {
     }
   },
 };
+
+// Stripe (public - for landing page payment)
+export const stripeAPI = {
+  createPaymentIntent: async (body: {
+    productId: string;
+    productName?: string;
+    productPrice?: number;
+    productSupplier?: string;
+    customer: { fullName: string; address: string; city: string; phone: string };
+    selectedAttributes: Record<string, string>;
+  }) => {
+    const data = await apiRequest<{ clientSecret: string; orderId: string }>('/stripe/create-payment-intent', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    return data;
+  },
+};

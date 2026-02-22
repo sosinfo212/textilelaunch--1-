@@ -16,6 +16,8 @@ export const SettingsPage: React.FC = () => {
     const [geminiApiKey, setGeminiApiKey] = useState(settings.geminiApiKey);
     const [facebookPixelCode, setFacebookPixelCode] = useState(settings.facebookPixelCode || '');
     const [tiktokPixelCode, setTiktokPixelCode] = useState(settings.tiktokPixelCode || '');
+    const [stripePublishableKey, setStripePublishableKey] = useState(settings.stripePublishableKey || '');
+    const [stripeSecretKey, setStripeSecretKey] = useState(settings.stripeSecretKey || '');
     const [saveMessage, setSaveMessage] = useState('');
 
     // Update form when settings change
@@ -25,6 +27,8 @@ export const SettingsPage: React.FC = () => {
         setGeminiApiKey(settings.geminiApiKey);
         setFacebookPixelCode(settings.facebookPixelCode || '');
         setTiktokPixelCode(settings.tiktokPixelCode || '');
+        setStripePublishableKey(settings.stripePublishableKey || '');
+        setStripeSecretKey(settings.stripeSecretKey || '');
     }, [settings]);
 
     // Users Form
@@ -42,7 +46,9 @@ export const SettingsPage: React.FC = () => {
                     logoUrl,
                     geminiApiKey,
                     facebookPixelCode,
-                    tiktokPixelCode
+                    tiktokPixelCode,
+                    stripePublishableKey,
+                    stripeSecretKey
                 });
                 setSaveMessage('Paramètres sauvegardés avec succès !');
                 setTimeout(() => setSaveMessage(''), 3000);
@@ -164,6 +170,29 @@ export const SettingsPage: React.FC = () => {
                                 <p className="mt-2 text-xs text-gray-500">
                                     Nécessaire pour la génération automatique de descriptions.
                                 </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Stripe – Clé publique (publishable)</label>
+                                <input
+                                    type="text"
+                                    value={stripePublishableKey}
+                                    onChange={e => setStripePublishableKey(e.target.value)}
+                                    className="focus:ring-brand-500 focus:border-brand-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 font-mono"
+                                    placeholder="pk_live_... ou pk_test_..."
+                                />
+                                <p className="mt-1 text-xs text-gray-500">Pour le paiement en ligne (Stripe) sur les fiches produit.</p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Stripe – Clé secrète (secret)</label>
+                                <input
+                                    type="password"
+                                    value={stripeSecretKey}
+                                    onChange={e => setStripeSecretKey(e.target.value)}
+                                    className="focus:ring-brand-500 focus:border-brand-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 font-mono"
+                                    placeholder="sk_live_... ou sk_test_..."
+                                />
+                                <p className="mt-1 text-xs text-gray-500">Ne partagez jamais cette clé. Utilisez sk_test_ en développement.</p>
                             </div>
 
                             <div>

@@ -27,6 +27,7 @@ export const EditProduct: React.FC = () => {
   const [videoUrl, setVideoUrl] = useState(''); // Input field for video URL
   const [attributes, setAttributes] = useState<ProductAttribute[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [paymentOptions, setPaymentOptions] = useState<'cod_only' | 'stripe_only' | 'both'>('cod_only');
   const [isGenerating, setIsGenerating] = useState(false);
   
   // UI State
@@ -56,6 +57,7 @@ export const EditProduct: React.FC = () => {
         // Safely set attributes, default to empty array if missing
         setAttributes(Array.isArray(p.attributes) ? p.attributes : []);
         setSelectedTemplateId(p.landingPageTemplateId || '');
+        setPaymentOptions(['cod_only', 'stripe_only', 'both'].includes((p as any).paymentOptions) ? (p as any).paymentOptions : 'cod_only');
       } else {
         alert("Produit introuvable");
         navigate('/');
@@ -182,7 +184,8 @@ export const EditProduct: React.FC = () => {
       images: finalImages,
       videos: videos.length > 0 ? videos : undefined,
       attributes: finalAttributes,
-      landingPageTemplateId: selectedTemplateId || undefined
+      landingPageTemplateId: selectedTemplateId || undefined,
+      paymentOptions
     };
     try {
       await updateProduct(updatedProduct);
@@ -392,6 +395,19 @@ export const EditProduct: React.FC = () => {
                 {templates.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Paiement</label>
+            <select
+              value={paymentOptions}
+              onChange={e => setPaymentOptions(e.target.value as 'cod_only' | 'stripe_only' | 'both')}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm"
+            >
+              <option value="cod_only">COD uniquement (paiement à la livraison)</option>
+              <option value="stripe_only">Stripe uniquement (paiement en ligne)</option>
+              <option value="both">Les deux (le client choisit)</option>
             </select>
           </div>
 

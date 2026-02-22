@@ -73,12 +73,14 @@ router.post('/', async (req, res) => {
       productPrice,
       productSupplier,
       customer,
-      selectedAttributes
+      selectedAttributes,
+      paymentMethod
     } = req.body;
 
     if (!productId || !customer || !selectedAttributes) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+    const payMethod = paymentMethod === 'stripe' ? 'stripe' : 'cod';
 
     // Get product owner to set seller_id
     const [products] = await db.execute(
@@ -98,11 +100,11 @@ router.post('/', async (req, res) => {
     await db.execute(
       `INSERT INTO orders (
         id, seller_id, product_id, product_name, product_price,
-        product_supplier, customer_info, selected_attributes, status, viewed
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', FALSE)`,
+        product_supplier, customer_info, selected_attributes, status, viewed, payment_method
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, ?)`,
       [
         id, sellerId, productId, productName, productPrice,
-        productSupplier || null, customerJson, attributesJson
+        productSupplier || null, customerJson, attributesJson, payMethod === 'stripe' ? 'pending_payment' : 'pending', payMethod
       ]
     );
 
@@ -247,6 +249,8 @@ function formatOrder(row) {
     selectedAttributes: selectedAttributes,
     status: row.status,
     viewed: Boolean(row.viewed),
+    paymentMethod: row.payment_method || 'cod',
+    stripePaymentIntentId: row.stripe_payment_intent_id || undefined,
     createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now()
   };
 }

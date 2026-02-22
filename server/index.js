@@ -13,6 +13,7 @@ import geminiRoutes from './routes/gemini.js';
 import analyticsRoutes from './routes/analytics.js';
 import trackingRoutes from './routes/tracking.js';
 import integrationsRoutes from './routes/integrations.js';
+import stripeRoutes, { stripeWebhookHandler } from './routes/stripe.js';
 
 // Load .env file - specify path explicitly
 import { fileURLToPath } from 'url';
@@ -81,6 +82,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['Set-Cookie']
 }));
+// Stripe webhook needs raw body (must be before express.json())
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 // Increase body size limit to 50MB for base64 images
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -165,6 +168,7 @@ app.use('/api/gemini', geminiRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/tracking', trackingRoutes);
 app.use('/api/integrations', integrationsRoutes);
+app.use('/api/stripe', stripeRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

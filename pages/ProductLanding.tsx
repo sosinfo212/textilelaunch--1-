@@ -6,8 +6,51 @@ import { isVideo, isImage } from '../src/utils/imageUtils';
 import { formatPrice } from '../src/utils/currency';
 import { CheckCircle, ArrowLeft, Phone, MapPin, Truck, ShieldCheck, Star, ShoppingCart, Plus, Minus, Home, AlertCircle, Video } from 'lucide-react';
 import { LandingPageRenderer } from '../components/LandingPageRenderer';
-import { productsAPI, templatesAPI, settingsAPI } from '../src/utils/api';
+import { productsAPI, templatesAPI, settingsAPI, stripeAPI } from '../src/utils/api';
 import { useProductAnalytics } from '../hooks/useProductAnalytics';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
+function StripeConfirmForm({ onSuccess }: { onSuccess: () => void }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    setLoading(true);
+    setError(null);
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      setError(submitError.message || 'Erreur');
+      setLoading(false);
+      return;
+    }
+    const { error: confirmError } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}${window.location.pathname}?paid=1`,
+        payment_method_data: {}
+      }
+    });
+    if (confirmError) {
+      setError(confirmError.message || 'Paiement refusé');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <PaymentElement />
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <button type="submit" disabled={!stripe || loading} className="w-full bg-red-600 text-white font-bold py-3 px-6 rounded-xl disabled:opacity-50">
+        {loading ? 'Traitement...' : 'Payer'}
+      </button>
+    </form>
+  );
+}
 
 export const ProductLanding: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -29,6 +72,10 @@ export const ProductLanding: React.FC = () => {
   const [submitted, setSubmitted] = useState(false);
   const [formError, setFormError] = useState('');
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'stripe'>('cod');
+  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
+  const [stripePublishableKey, setStripePublishableKey] = useState<string>('');
+  const [stripeOrderId, setStripeOrderId] = useState<string | null>(null);
 
   // Combine images and videos into a single media array
   const media = useMemo(() => {
@@ -91,6 +138,22 @@ export const ProductLanding: React.FC = () => {
     
     loadProduct();
   }, [productId, getProduct]);
+
+  // Sync payment method when product has stripe_only
+  useEffect(() => {
+    if (product && (product as any).paymentOptions === 'stripe_only') {
+      setPaymentMethod('stripe');
+    }
+  }, [product]);
+
+  // Stripe return_url: mark as submitted when coming back with ?paid=1
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('paid') === '1') {
+      setSubmitted(true);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   // Update page title when product is loaded
   useEffect(() => {
@@ -348,18 +411,47 @@ export const ProductLanding: React.FC = () => {
         return;
     }
 
+    const selectedAttrs = { ...selectedAttributes, 'Quantité': quantity.toString() };
+
+    if (paymentMethod === 'stripe') {
+      try {
+        const settingsRes = await settingsAPI.getByUserId(product.ownerId);
+        const pk = settingsRes.settings?.stripePublishableKey;
+        if (!pk) {
+          setFormError('Le paiement en ligne n\'est pas configuré pour ce produit.');
+          return;
+        }
+        const { clientSecret, orderId } = await stripeAPI.createPaymentIntent({
+          productId: product.id,
+          productName: product.name,
+          productPrice: product.price,
+          productSupplier: product.supplier,
+          customer: formData,
+          selectedAttributes: selectedAttrs
+        });
+        setStripePublishableKey(pk);
+        setStripeClientSecret(clientSecret);
+        setStripeOrderId(orderId);
+      } catch (err: any) {
+        setFormError(err?.message || 'Impossible de préparer le paiement. Réessayez ou choisissez COD.');
+        console.error(err);
+      }
+      return;
+    }
+
     const newOrder: Order = {
-        id: `ord_${Date.now()}`,
-        sellerId: product.ownerId,
-        productId: product.id,
-        productName: product.name,
-        productPrice: product.price,
-        productSupplier: product.supplier, // Added supplier to order
-        customer: formData,
-        selectedAttributes: { ...selectedAttributes, 'Quantité': quantity.toString() },
-        createdAt: Date.now(),
-        status: 'pending',
-        viewed: false
+      id: `ord_${Date.now()}`,
+      sellerId: product.ownerId,
+      productId: product.id,
+      productName: product.name,
+      productPrice: product.price,
+      productSupplier: product.supplier,
+      customer: formData,
+      selectedAttributes: selectedAttrs,
+      createdAt: Date.now(),
+      status: 'pending',
+      viewed: false,
+      paymentMethod: 'cod'
     };
     try {
       await addOrder(newOrder);
@@ -391,6 +483,8 @@ export const ProductLanding: React.FC = () => {
 
   // Ensure attributes is an array to avoid crashes
   const attributes = Array.isArray(product.attributes) ? product.attributes : [];
+  const payOpts = (product as any).paymentOptions || 'cod_only';
+  const stripePromise = useMemo(() => (stripePublishableKey ? loadStripe(stripePublishableKey) : null), [stripePublishableKey]);
 
   // Check if description contains HTML tags
   const isHtmlDescription = /<[a-z][\s\S]*>/i.test(product.description);
@@ -603,9 +697,14 @@ export const ProductLanding: React.FC = () => {
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-500"></div>
                     
                     <h3 className="text-lg font-bold text-center mb-6 text-gray-800">
-                        لطلب المنتج، المرجو ملأ الاستمارة التالية:
+                        {stripeClientSecret ? 'أكّد الدفع عبر البطاقة' : 'لطلب المنتج، المرجو ملأ الاستمارة التالية:'}
                     </h3>
 
+                    {stripeClientSecret && stripePromise ? (
+                      <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>
+                        <StripeConfirmForm onSuccess={() => setSubmitted(true)} />
+                      </Elements>
+                    ) : (
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {/* Attributes */}
                         {attributes.map((attr) => (
@@ -647,6 +746,23 @@ export const ProductLanding: React.FC = () => {
                                 </button>
                             </div>
                         </div>
+
+                        {/* Payment method (when both COD and Stripe) */}
+                        {payOpts === 'both' && (
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">طريقة الدفع</label>
+                                <div className="flex gap-3">
+                                    <label className={`flex-1 cursor-pointer px-4 py-3 rounded-lg border-2 text-sm font-bold transition-all ${paymentMethod === 'cod' ? 'border-red-600 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-600'}`}>
+                                        <input type="radio" name="pay" value="cod" className="sr-only" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} />
+                                        دفع عند الاستلام (COD)
+                                    </label>
+                                    <label className={`flex-1 cursor-pointer px-4 py-3 rounded-lg border-2 text-sm font-bold transition-all ${paymentMethod === 'stripe' ? 'border-red-600 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-600'}`}>
+                                        <input type="radio" name="pay" value="stripe" className="sr-only" checked={paymentMethod === 'stripe'} onChange={() => setPaymentMethod('stripe')} />
+                                        دفع عبر الإنترنت
+                                    </label>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Inputs */}
                         <div className="space-y-3">
@@ -708,9 +824,10 @@ export const ProductLanding: React.FC = () => {
                             className="w-full bg-red-600 border border-transparent rounded-xl py-4 px-8 flex items-center justify-center text-lg font-black text-white hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-200 shadow-lg transform transition-transform active:scale-95"
                         >
                             <ShoppingCart className="ml-2 h-6 w-6" />
-                            اطلب الآن - {formatPrice(product.price * quantity, product.currency)}
+                            {paymentMethod === 'stripe' ? 'الدفع عبر الإنترنت' : 'اطلب الآن'} - {formatPrice(product.price * quantity, product.currency)}
                         </button>
                     </form>
+                    )}
                 </div>
 
                 {/* Trust Badges */}

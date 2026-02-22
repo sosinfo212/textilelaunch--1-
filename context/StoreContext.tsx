@@ -49,7 +49,9 @@ const DEFAULT_SETTINGS: AppSettings = {
     logoUrl: '',
     geminiApiKey: '',
     facebookPixelCode: '',
-    tiktokPixelCode: ''
+    tiktokPixelCode: '',
+    stripePublishableKey: '',
+    stripeSecretKey: ''
 };
 
 export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -250,7 +252,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         productPrice: order.productPrice,
         productSupplier: order.productSupplier,
         customer: order.customer,
-        selectedAttributes: order.selectedAttributes
+        selectedAttributes: order.selectedAttributes,
+        paymentMethod: order.paymentMethod || 'cod'
       };
       const res = await ordersAPI.create(orderData);
       const newOrder = res.order;
@@ -391,7 +394,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           logoUrl: newSettings.logoUrl,
           geminiApiKey: newSettings.geminiApiKey,
           facebookPixelCode: newSettings.facebookPixelCode || '',
-          tiktokPixelCode: newSettings.tiktokPixelCode || ''
+          tiktokPixelCode: newSettings.tiktokPixelCode || '',
+          stripePublishableKey: newSettings.stripePublishableKey || '',
+          stripeSecretKey: newSettings.stripeSecretKey || ''
         };
         const res = await settingsAPI.update(settingsData);
         const updatedSettings = { ...res.settings, userId: user.id };

@@ -21,6 +21,7 @@ export interface Product {
   supplier?: string;
   createdAt: number;
   landingPageTemplateId?: string; // Link to a custom design
+  paymentOptions?: 'cod_only' | 'stripe_only' | 'both'; // How customer can pay
 }
 
 export interface CustomerInfo {
@@ -45,8 +46,9 @@ export interface Order {
   customer: CustomerInfo;
   selectedAttributes: Record<string, string>;
   createdAt: number;
-  status: 'pending' | 'shipped' | 'completed';
+  status: 'pending' | 'pending_payment' | 'shipped' | 'completed';
   viewed: boolean;
+  paymentMethod?: 'cod' | 'stripe';
 }
 
 // --- Builder Types ---
@@ -123,4 +125,6 @@ export interface AppSettings {
   geminiApiKey: string;
   facebookPixelCode?: string;
   tiktokPixelCode?: string;
+  stripePublishableKey?: string;
+  stripeSecretKey?: string;
 }
