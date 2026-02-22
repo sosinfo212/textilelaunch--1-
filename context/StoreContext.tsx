@@ -201,15 +201,17 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         attributes: product.attributes || [],
         category: product.category,
         supplier: product.supplier,
-        landingPageTemplateId: product.landingPageTemplateId
+landingPageTemplateId: product.landingPageTemplateId,
+        paymentOptions: product.paymentOptions || 'cod_only'
       };
-      
+
       // Only include optional fields if they have values
       if (product.regularPrice) productData.regularPrice = product.regularPrice;
       if (product.category) productData.category = product.category;
       if (product.supplier) productData.supplier = product.supplier;
       if (product.landingPageTemplateId) productData.landingPageTemplateId = product.landingPageTemplateId;
-      
+      if (product.paymentOptions) productData.paymentOptions = product.paymentOptions;
+
       const res = await productsAPI.update(product.id, productData);
       const updatedProduct = res.product;
       setAllProducts(allProducts.map(p => p.id === updatedProduct.id ? updatedProduct : p));
