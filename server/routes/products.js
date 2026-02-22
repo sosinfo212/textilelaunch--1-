@@ -409,6 +409,14 @@ router.get('/:id/analytics', authenticate, async (req, res) => {
           [productId, fromDate, toDate]
         ).catch(() => [[]]);
 
+        function toDateKey(d) {
+          if (!d) return null;
+          if (d instanceof Date) return d.toISOString().slice(0, 10);
+          const s = String(d);
+          if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+          return null;
+        }
+
         const dayMap = {};
         const from = new Date(fromDate + 'T00:00:00Z');
         const to = new Date(toDate + 'T23:59:59Z');
@@ -417,18 +425,18 @@ router.get('/:id/analytics', authenticate, async (req, res) => {
           dayMap[key] = { date: key, visitors: 0, clicks: 0, timeSpentSeconds: 0, orders: 0 };
         }
         for (const row of viewsByDay) {
-          const key = row.d ? String(row.d).slice(0, 10) : null;
+          const key = toDateKey(row.d);
           if (key && dayMap[key]) {
             dayMap[key].visitors = Number(row.visitors) || 0;
             dayMap[key].timeSpentSeconds = Number(row.time_sec) || 0;
           }
         }
         for (const row of clicksByDay) {
-          const key = row.d ? String(row.d).slice(0, 10) : null;
+          const key = toDateKey(row.d);
           if (key && dayMap[key]) dayMap[key].clicks = Number(row.clicks) || 0;
         }
         for (const row of ordersByDay) {
-          const key = row.d ? String(row.d).slice(0, 10) : null;
+          const key = toDateKey(row.d);
           if (key && dayMap[key]) dayMap[key].orders = Number(row.orders) || 0;
         }
         timeSeries = Object.keys(dayMap).sort().map((k) => dayMap[k]);
