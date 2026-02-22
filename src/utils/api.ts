@@ -376,8 +376,17 @@ export const integrationsAPI = {
   },
   getLaunchCredentials: async (token: string) => {
     const url = `${API_BASE_URL}/integrations/affiliate/launch?token=${encodeURIComponent(token)}`;
-    const res = await fetch(url, { credentials: 'omit' });
-    if (!res.ok) throw new Error('Invalid or expired link');
-    return res.json() as Promise<{ loginUrl: string; email: string; password: string; loginFieldName?: string; passwordFieldName?: string }>;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    try {
+      const res = await fetch(url, { credentials: 'omit', signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!res.ok) throw new Error('Invalid or expired link');
+      return res.json() as Promise<{ loginUrl: string; email: string; password: string; loginFieldName?: string; passwordFieldName?: string }>;
+    } catch (e: any) {
+      clearTimeout(timeoutId);
+      if (e?.name === 'AbortError') throw new Error('Server did not respond');
+      throw e;
+    }
   },
 };

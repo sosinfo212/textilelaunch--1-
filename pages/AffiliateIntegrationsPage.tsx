@@ -23,6 +23,7 @@ export const AffiliateIntegrationsPage: React.FC = () => {
   });
   const [saving, setSaving] = useState(false);
   const [launching, setLaunching] = useState<string | null>(null);
+  const [popupBlockedUrl, setPopupBlockedUrl] = useState<string | null>(null);
 
   const loadConnections = async () => {
     setLoading(true);
@@ -70,9 +71,13 @@ export const AffiliateIntegrationsPage: React.FC = () => {
   const handleConnect = async (conn: Connection) => {
     setLaunching(conn.id);
     setError(null);
+    setPopupBlockedUrl(null);
     try {
       const launchUrl = await integrationsAPI.createAffiliateLaunchUrl(conn.id);
-      window.open(launchUrl, '_blank', 'noopener,noreferrer');
+      const newWindow = window.open(launchUrl, '_blank', 'noopener,noreferrer');
+      if (!newWindow || newWindow.closed) {
+        setPopupBlockedUrl(launchUrl);
+      }
     } catch (e: any) {
       setError(e?.message || 'Impossible de créer le lien de connexion.');
     } finally {
@@ -110,6 +115,16 @@ export const AffiliateIntegrationsPage: React.FC = () => {
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
           {error}
+        </div>
+      )}
+      {popupBlockedUrl && (
+        <div className="mb-4 p-3 rounded-lg bg-amber-50 text-amber-800 text-sm">
+          <p className="font-medium mb-1">Ouvrez le lien dans un nouvel onglet</p>
+          <p className="text-xs mb-2">Si la fenêtre ne s’est pas ouverte, copiez le lien ci-dessous et ouvrez-le dans un nouvel onglet :</p>
+          <a href={popupBlockedUrl} target="_blank" rel="noopener noreferrer" className="break-all text-brand-600 hover:underline">
+            {popupBlockedUrl}
+          </a>
+          <button type="button" onClick={() => setPopupBlockedUrl(null)} className="block mt-2 text-xs text-gray-500 hover:text-gray-700">Fermer</button>
         </div>
       )}
 

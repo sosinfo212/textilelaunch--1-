@@ -6,7 +6,7 @@ import { encrypt, decrypt } from '../utils/encrypt.js';
 
 const router = express.Router();
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://trendycosmetix.com';
 
 // List affiliate connections (no credentials)
 router.get('/affiliate', authenticate, async (req, res) => {

@@ -54,7 +54,12 @@ export const AffiliateConnectBridge: React.FC = () => {
       } catch (e: any) {
         if (!cancelled) {
           setStatus('error');
-          setErrorMessage(e?.message || 'Lien expiré ou invalide.');
+          const msg = e?.message || '';
+          if (msg.includes('fetch') || msg.includes('Failed') || msg.includes('Network')) {
+            setErrorMessage('Serveur inaccessible. Vérifiez que l’application backend tourne et réessayez depuis la page Intégrations.');
+          } else {
+            setErrorMessage('Lien expiré ou invalide (valide 2 min). Recommencez depuis la page Intégrations.');
+          }
         }
       }
     };
