@@ -144,13 +144,24 @@ export const ProductAnalyticsPage: React.FC = () => {
 
   function lineChartPath(values: number[], maxVal: number): string {
     if (!values.length || maxVal <= 0) return '';
+    const n = values.length;
     const pts = values.map((v, i) => {
-      const x = pad.left + (i / Math.max(1, values.length - 1)) * innerW;
+      const x = pad.left + (n > 1 ? (i / (n - 1)) : 0.5) * innerW;
       const y = pad.top + innerH - (v / maxVal) * innerH;
       return `${x},${y}`;
     });
     return `M ${pts.join(' L ')}`;
   }
+
+  const xAxisLabelIndices =
+    timeSeries?.length &&
+    (() => {
+      const n = timeSeries.length;
+      const maxLabels = 10;
+      if (n <= 1) return [0];
+      if (n <= maxLabels) return timeSeries.map((_, i) => i);
+      return Array.from({ length: maxLabels }, (_, i) => Math.round((i * (n - 1)) / (maxLabels - 1)));
+    })();
 
   const maxVisitors = timeSeries?.length ? Math.max(1, ...timeSeries.map((r) => r.visitors)) : 1;
   const maxClicks = timeSeries?.length ? Math.max(1, ...timeSeries.map((r) => r.clicks)) : 1;
@@ -274,12 +285,20 @@ export const ProductAnalyticsPage: React.FC = () => {
                   <p className="text-sm font-medium text-gray-500">Taux de conversion</p>
                   <p className="text-xl font-bold text-gray-900">
                     {analytics.uniqueClicks > 0
-                      ? `${((100 * analytics.totalOrders) / analytics.uniqueClicks).toFixed(1)} %`
+                      ? (() => {
+                          const pct = (100 * analytics.totalOrders) / analytics.uniqueClicks;
+                          if (pct > 100) return '100 %+';
+                          return `${pct.toFixed(1)} %`;
+                        })()
                       : '—'}
                   </p>
                 </div>
               </div>
-              <p className="mt-1 text-xs text-gray-400">Commandes / visiteurs uniques</p>
+              <p className="mt-1 text-xs text-gray-400">
+                {analytics.uniqueClicks > 0 && analytics.totalOrders > analytics.uniqueClicks
+                  ? `${analytics.totalOrders} cmd / ${analytics.uniqueClicks} visiteur(s)`
+                  : 'Commandes / visiteurs uniques'}
+              </p>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
               <div className="flex items-center gap-2">
@@ -325,12 +344,15 @@ export const ProductAnalyticsPage: React.FC = () => {
                 <div className="overflow-x-auto">
                   <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full min-w-[280px]" preserveAspectRatio="xMidYMid meet">
                     {series.map((s) => (
-                      <path key={s.key} fill="none" stroke={s.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d={lineChartPath(s.values, s.max)} />
+                      <path key={s.key} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" d={lineChartPath(s.values, s.max)} />
                     ))}
-                    {timeSeries.map((r, i) => {
-                      const x = pad.left + (i / Math.max(1, timeSeries.length - 1)) * innerW;
+                    {xAxisLabelIndices?.map((i) => {
+                      const r = timeSeries[i];
+                      if (!r) return null;
+                      const n = timeSeries.length;
+                      const x = pad.left + (n > 1 ? (i / (n - 1)) : 0.5) * innerW;
                       return (
-                        <text key={r.date} x={x} y={chartH - 6} textAnchor="middle" style={{ fontSize: 10, fill: '#6b7280', fontFamily: 'system-ui' }}>{formatShortDate(r.date)}</text>
+                        <text key={r.date} x={x} y={chartH - 6} textAnchor="middle" style={{ fontSize: 11, fill: '#6b7280', fontFamily: 'system-ui' }}>{formatShortDate(r.date)}</text>
                       );
                     })}
                   </svg>
