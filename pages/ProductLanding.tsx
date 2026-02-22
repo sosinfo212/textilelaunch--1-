@@ -91,6 +91,9 @@ export const ProductLanding: React.FC = () => {
   // Refs for scrolling
   const formRef = useRef<HTMLDivElement>(null);
 
+  // Stripe: must be at top level (same hook count every render)
+  const stripePromise = useMemo(() => (stripePublishableKey ? loadStripe(stripePublishableKey) : null), [stripePublishableKey]);
+
   useEffect(() => {
     const loadProduct = async () => {
       if (!productId) return;
@@ -484,7 +487,6 @@ export const ProductLanding: React.FC = () => {
   // Ensure attributes is an array to avoid crashes
   const attributes = Array.isArray(product.attributes) ? product.attributes : [];
   const payOpts = (product as any).paymentOptions || 'cod_only';
-  const stripePromise = useMemo(() => (stripePublishableKey ? loadStripe(stripePublishableKey) : null), [stripePublishableKey]);
 
   // Check if description contains HTML tags
   const isHtmlDescription = /<[a-z][\s\S]*>/i.test(product.description);
