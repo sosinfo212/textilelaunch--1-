@@ -138,9 +138,11 @@ export const ProductAnalyticsPage: React.FC = () => {
 
   const chartW = 640;
   const chartH = 220;
-  const pad = { top: 12, right: 12, bottom: 32, left: 12 };
+  const pad = { top: 28, right: 12, bottom: 32, left: 40 };
   const innerW = chartW - pad.left - pad.right;
   const innerH = chartH - pad.top - pad.bottom;
+
+  const [hoveredDayIndex, setHoveredDayIndex] = useState<number | null>(null);
 
   function lineChartPath(values: number[], maxVal: number): string {
     if (!values.length || maxVal <= 0) return '';
@@ -340,12 +342,53 @@ export const ProductAnalyticsPage: React.FC = () => {
                 <TrendingUp className="h-5 w-5" />
                 Évolution par jour
               </h2>
-              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm relative">
+                {hoveredDayIndex != null && timeSeries[hoveredDayIndex] && (
+                  <div className="absolute left-4 right-4 top-3 z-10 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-lg">
+                    <p className="text-xs font-medium text-gray-500 mb-1">{timeSeries[hoveredDayIndex].date}</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-gray-700">
+                      <span>Visiteurs: <strong>{timeSeries[hoveredDayIndex].visitors}</strong></span>
+                      <span>Clics CTA: <strong>{timeSeries[hoveredDayIndex].clicks}</strong></span>
+                      <span>Temps: <strong>{timeSeries[hoveredDayIndex].timeSpentSeconds} s</strong></span>
+                      <span>Commandes: <strong>{timeSeries[hoveredDayIndex].orders}</strong></span>
+                    </div>
+                  </div>
+                )}
                 <div className="overflow-x-auto">
                   <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full min-w-[280px]" preserveAspectRatio="xMidYMid meet">
+                    {/* Y-axis line */}
+                    <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + innerH} stroke="#e5e7eb" strokeWidth="1" />
+                    {/* Y-axis labels (0–100 relative scale) */}
+                    {[0, 25, 50, 75, 100].map((pct) => {
+                      const y = pad.top + innerH - (pct / 100) * innerH;
+                      return (
+                        <g key={pct}>
+                          <line x1={pad.left} y1={y} x2={pad.left + innerW} y2={y} stroke="#f3f4f6" strokeWidth="1" strokeDasharray="2,2" />
+                          <text x={pad.left - 6} y={y + 4} textAnchor="end" style={{ fontSize: 10, fill: '#6b7280', fontFamily: 'system-ui' }}>{pct}</text>
+                        </g>
+                      );
+                    })}
                     {series.map((s) => (
                       <path key={s.key} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" d={lineChartPath(s.values, s.max)} />
                     ))}
+                    {/* Invisible hover strips per day */}
+                    {timeSeries.map((r, i) => {
+                      const n = timeSeries.length;
+                      const x = pad.left + (n > 1 ? (i / (n - 1)) : 0.5) * innerW;
+                      const w = n > 1 ? Math.max(4, innerW / (n - 1) * 0.8) : innerW;
+                      return (
+                        <rect
+                          key={r.date}
+                          x={x - w / 2}
+                          y={pad.top}
+                          width={w}
+                          height={innerH}
+                          fill="transparent"
+                          onMouseEnter={() => setHoveredDayIndex(i)}
+                          onMouseLeave={() => setHoveredDayIndex(null)}
+                        />
+                      );
+                    })}
                     {xAxisLabelIndices?.map((i) => {
                       const r = timeSeries[i];
                       if (!r) return null;
@@ -357,6 +400,7 @@ export const ProductAnalyticsPage: React.FC = () => {
                     })}
                   </svg>
                 </div>
+                <p className="text-xs text-gray-400 mt-1 pl-1">Axe Y : échelle relative (0–100) par indicateur. Survolez le graphique pour voir les valeurs.</p>
                 <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-gray-100 justify-center sm:justify-start">
                   {series.map((s) => (
                     <span key={s.key} className="inline-flex items-center gap-1.5 text-xs text-gray-600">
