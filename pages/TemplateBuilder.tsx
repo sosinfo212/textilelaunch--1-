@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { LandingPageTemplate } from '../types';
 import { 
-    Save, ArrowLeft, CheckCircle
+    Save, ArrowLeft, CheckCircle, ChevronDown, ChevronUp, Copy
 } from 'lucide-react';
 import { LandingPageRenderer } from '../components/LandingPageRenderer';
 
@@ -86,6 +86,7 @@ export const TemplateBuilder: React.FC = () => {
     const [name, setName] = useState('Nouveau Modèle');
     const [htmlCode, setHtmlCode] = useState(DEFAULT_CODE_BOILERPLATE);
     const [copiedTag, setCopiedTag] = useState<string | null>(null);
+    const [shortcodesOpen, setShortcodesOpen] = useState(true);
 
     // Mock Form State for Renderer
     const formState = {
@@ -218,6 +219,62 @@ export const TemplateBuilder: React.FC = () => {
 
                 {/* Code Editor and Preview */}
                 <div className="flex-1 overflow-hidden relative flex flex-col">
+                    {/* Shortcodes panel - visible on all screens */}
+                    <div className="bg-white border-b border-gray-200 flex-shrink-0" dir="ltr">
+                        <button
+                            type="button"
+                            onClick={() => setShortcodesOpen(!shortcodesOpen)}
+                            className="w-full px-4 py-3 flex items-center justify-between text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                            <span className="flex items-center gap-2">
+                                <Copy size={16} className="text-brand-600" />
+                                Shortcodes (cliquez pour copier)
+                            </span>
+                            {shortcodesOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                        </button>
+                        {shortcodesOpen && (
+                            <div className="px-4 pb-3 pt-0 max-h-48 overflow-y-auto border-t border-gray-100">
+                                <div className="flex flex-wrap gap-2 pt-3">
+                                    {AVAILABLE_TAGS.map((tag) => (
+                                        <button
+                                            key={tag.tag}
+                                            type="button"
+                                            onClick={async () => {
+                                                try {
+                                                    await navigator.clipboard.writeText(tag.tag);
+                                                    setCopiedTag(tag.tag);
+                                                    setTimeout(() => setCopiedTag(null), 2000);
+                                                } catch {
+                                                    const ta = document.createElement('textarea');
+                                                    ta.value = tag.tag;
+                                                    ta.style.position = 'fixed';
+                                                    ta.style.opacity = '0';
+                                                    document.body.appendChild(ta);
+                                                    ta.select();
+                                                    try {
+                                                        document.execCommand('copy');
+                                                        setCopiedTag(tag.tag);
+                                                        setTimeout(() => setCopiedTag(null), 2000);
+                                                    } finally {
+                                                        document.body.removeChild(ta);
+                                                    }
+                                                }
+                                            }}
+                                            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-mono border transition-all ${
+                                                copiedTag === tag.tag
+                                                    ? 'bg-green-50 border-green-300 text-green-700'
+                                                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-brand-50 hover:border-brand-200'
+                                            }`}
+                                            title={tag.desc}
+                                        >
+                                            {tag.tag}
+                                            {copiedTag === tag.tag && <CheckCircle size={12} />}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <div className="h-1/2 border-b border-gray-200 flex flex-col" dir="ltr">
                         <div className="bg-gray-800 text-white text-xs px-4 py-2 flex justify-between">
                             <span>Éditeur HTML/CSS</span>
