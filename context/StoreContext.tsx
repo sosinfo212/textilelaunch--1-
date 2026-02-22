@@ -330,7 +330,7 @@ landingPageTemplateId: product.landingPageTemplateId,
   };
 
   const addTemplate = async (template: LandingPageTemplate) => {
-    if (!user) return;
+    if (!user) throw new Error('Vous devez être connecté pour enregistrer un modèle.');
     try {
       const templateData = {
         name: template.name,

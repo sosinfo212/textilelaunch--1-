@@ -87,6 +87,8 @@ export const TemplateBuilder: React.FC = () => {
     const [htmlCode, setHtmlCode] = useState(DEFAULT_CODE_BOILERPLATE);
     const [copiedTag, setCopiedTag] = useState<string | null>(null);
     const [shortcodesOpen, setShortcodesOpen] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     // Mock Form State for Renderer
     const formState = {
@@ -112,23 +114,35 @@ export const TemplateBuilder: React.FC = () => {
         }
     }, [templateId, getTemplate]);
 
-    const handleSave = () => {
-        const newTemplate: LandingPageTemplate = {
-            id: templateId === 'new' ? `tmpl_${Date.now()}` : templateId!,
-            ownerId: '',
-            name,
-            mode: 'code',
-            elements: [],
-            htmlCode: htmlCode,
-            createdAt: Date.now()
-        };
-        
-        if (templateId === 'new') {
-            addTemplate(newTemplate);
-        } else {
-            updateTemplate(newTemplate);
+    const handleSave = async () => {
+        const trimmedName = (name || '').trim();
+        if (!trimmedName) {
+            setSaveError('Donnez un nom au modèle.');
+            return;
         }
-        navigate('/templates');
+        setSaveError(null);
+        setSaving(true);
+        try {
+            const newTemplate: LandingPageTemplate = {
+                id: templateId === 'new' ? `tmpl_${Date.now()}` : templateId!,
+                ownerId: '',
+                name: trimmedName,
+                mode: 'code',
+                elements: [],
+                htmlCode: htmlCode,
+                createdAt: Date.now()
+            };
+            if (templateId === 'new') {
+                await addTemplate(newTemplate);
+            } else {
+                await updateTemplate(newTemplate);
+            }
+            navigate('/templates');
+        } catch (err: any) {
+            setSaveError(err?.message || 'Erreur lors de la sauvegarde. Réessayez.');
+        } finally {
+            setSaving(false);
+        }
     };
 
 
@@ -136,26 +150,32 @@ export const TemplateBuilder: React.FC = () => {
         <div className="h-[calc(100vh-64px)] flex flex-col bg-gray-100 font-cairo" dir="rtl">
             {/* Top Bar */}
             <div className="bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center shadow-sm z-10" dir="ltr">
-                <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('/templates')} className="text-gray-500 hover:text-gray-700">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <button type="button" onClick={() => navigate('/templates')} className="text-gray-500 hover:text-gray-700 flex-shrink-0">
                         <ArrowLeft size={20} />
                     </button>
                     <input 
                         type="text" 
                         value={name} 
-                        onChange={e => setName(e.target.value)} 
-                        className="font-bold text-lg border-none focus:ring-0 text-gray-800 bg-transparent placeholder-gray-400"
-                        placeholder="Nom du modèle"
+                        onChange={e => { setName(e.target.value); setSaveError(null); }} 
+                        className="font-bold text-lg border-none focus:ring-0 text-gray-800 bg-transparent placeholder-gray-400 flex-1 min-w-0"
+                        placeholder="Nom du modèle (obligatoire)"
                     />
-                    
                 </div>
-                <button 
-                    onClick={handleSave}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-600 hover:bg-brand-700"
-                >
-                    <Save className="mr-2 h-4 w-4" />
-                    Sauvegarder
-                </button>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                    {saveError && (
+                        <span className="text-sm text-red-600 max-w-[200px] truncate" title={saveError}>{saveError}</span>
+                    )}
+                    <button 
+                        type="button"
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        <Save className="mr-2 h-4 w-4" />
+                        {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+                    </button>
+                </div>
             </div>
 
             <div className="flex-1 flex overflow-hidden">
