@@ -303,8 +303,11 @@ export const LandingPageRenderer: React.FC<RendererProps> = ({
 const CustomCodeRenderer: React.FC<{ htmlCode: string; product: Product; formState: any }> = ({ htmlCode, product, formState }) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
+    // 0. Normalize pipe in shortcodes (so &#124; from DB/editor still works)
+    let processedHtml = htmlCode.replace(/&#124;/g, '|');
+
     // 1. Process simple tags
-    let processedHtml = htmlCode
+    processedHtml = processedHtml
         .replace(/{product_name}/g, product.name)
         .replace(/{product_price}/g, formatPrice(product.price, product.currency))
         .replace(/{product_regular_price}/g, product.regularPrice ? formatPrice(product.regularPrice, product.currency) : '')
@@ -318,11 +321,19 @@ const CustomCodeRenderer: React.FC<{ htmlCode: string; product: Product; formSta
     // Helper: escape user-provided shortcode params for safe HTML
     const escapeParam = (s: string) => String(s)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    // Strip surrounding quotes from param so {shortcode|"Order Now"} shows Order Now
+    const cleanParam = (p: string | undefined): string => {
+        if (p == null) return '';
+        let s = String(p).trim();
+        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1).trim();
+        return s;
+    };
 
     // --- Component shortcodes (build your own layout) ---
-    // notification_bar: optional param = custom bar text. Example: {notification_bar|Free delivery}
-    processedHtml = processedHtml.replace(/\{notification_bar(?:\|([^}]*))?\}/g, (_, param) => {
-        const text = param != null && String(param).trim() ? escapeParam(String(param).trim()) : '🚚 التوصيل بالمجان على جميع المنتجات - والدفع عند الاستلام';
+    // notification_bar: optional param = custom bar text. Allow optional space around |
+    processedHtml = processedHtml.replace(/\{notification_bar\s*(?:\|\s*([^}]*))?\}/g, (_, param) => {
+        const raw = cleanParam(param);
+        const text = raw ? escapeParam(raw) : '🚚 التوصيل بالمجان على جميع المنتجات - والدفع عند الاستلام';
         return `<div class="tl-notification-bar bg-red-600 text-white text-center py-2 px-4 text-sm sm:text-base font-bold sticky top-0 z-50 shadow-md" dir="rtl">${text}</div>`;
     });
 
@@ -348,9 +359,10 @@ const CustomCodeRenderer: React.FC<{ htmlCode: string; product: Product; formSta
     processedHtml = processedHtml.replace(/{product_description_section}/g, descSectionHtml);
 
     const totalPrice = formatPrice(product.price * qty, product.currency);
-    // sticky_cta: optional param = button text. Example: {sticky_cta|Order Now}
-    processedHtml = processedHtml.replace(/\{sticky_cta(?:\|([^}]*))?\}/g, (_, param) => {
-        const btnText = param != null && String(param).trim() ? escapeParam(String(param).trim()) : 'اطلب الآن';
+    // sticky_cta: optional param = button text. Allow optional space around |
+    processedHtml = processedHtml.replace(/\{sticky_cta\s*(?:\|\s*([^}]*))?\}/g, (_, param) => {
+        const raw = cleanParam(param);
+        const btnText = raw ? escapeParam(raw) : 'اطلب الآن';
         return `<div class="tl-sticky-cta fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-40 flex items-center gap-4" dir="rtl"><div class="flex-1"><div class="text-xs text-gray-500 mb-1">السعر الإجمالي:</div><div class="text-xl font-black text-red-600 tl-total-price">${totalPrice}</div></div><button type="button" class="tl-scroll-to-form flex-1 bg-red-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg">${btnText}</button></div><div class="tl-sticky-cta-spacer h-24"></div>`;
     });
 
