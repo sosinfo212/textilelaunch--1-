@@ -371,7 +371,11 @@ export const integrationsAPI = {
     return apiRequest<{ success: boolean }>(`/integrations/affiliate/${id}`, { method: 'DELETE' });
   },
   createAffiliateLaunchUrl: async (connectionId: string) => {
-    const data = await apiRequest<{ launchUrl: string }>(`/integrations/affiliate/${connectionId}/launch`, { method: 'POST' });
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const data = await apiRequest<{ launchUrl: string }>(`/integrations/affiliate/${connectionId}/launch`, {
+      method: 'POST',
+      body: JSON.stringify({ origin }),
+    });
     return data.launchUrl;
   },
   getLaunchCredentials: async (token: string) => {

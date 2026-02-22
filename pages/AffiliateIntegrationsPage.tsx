@@ -109,7 +109,7 @@ export const AffiliateIntegrationsPage: React.FC = () => {
         <h1 className="text-2xl font-bold text-gray-900">Réseau d'affiliation</h1>
       </div>
       <p className="text-sm text-gray-600 mb-6">
-        Enregistrez vos identifiants (ex. Azome Affiliate). Cliquez sur « Connecter » pour ouvrir la plateforme dans un nouvel onglet, déjà connecté.
+        Enregistrez vos identifiants (ex. Azome Affiliate). « Connecter » ouvre la plateforme sur ce même domaine. Si vous voyez « 419 Page Expired », utilisez « Ouvrir la page de connexion » et connectez-vous avec vos identifiants.
       </p>
 
       {error && (
@@ -212,7 +212,7 @@ export const AffiliateIntegrationsPage: React.FC = () => {
                   <p className="font-medium text-gray-900">{conn.name}</p>
                   <p className="text-xs text-gray-500 truncate max-w-md">{conn.loginUrl}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     type="button"
                     onClick={() => fillForm(conn)}
@@ -220,6 +220,14 @@ export const AffiliateIntegrationsPage: React.FC = () => {
                   >
                     Modifier
                   </button>
+                  <a
+                    href={conn.loginUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-gray-600 hover:text-gray-900"
+                  >
+                    Ouvrir la page de connexion
+                  </a>
                   <button
                     type="button"
                     onClick={() => handleConnect(conn)}

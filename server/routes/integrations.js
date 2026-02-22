@@ -89,6 +89,21 @@ router.delete('/affiliate/:id', authenticate, async (req, res) => {
   }
 });
 
+// Allowed origins for launch URL (so Connect opens on your domain, not localhost)
+const ALLOWED_LAUNCH_ORIGINS = [
+  'https://trendycosmetix.com',
+  'http://trendycosmetix.com',
+  'https://www.trendycosmetix.com',
+  'http://www.trendycosmetix.com',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+];
+function launchBaseUrl(req) {
+  const origin = req.body && req.body.origin;
+  if (origin && ALLOWED_LAUNCH_ORIGINS.includes(origin)) return origin;
+  return FRONTEND_URL;
+}
+
 // Create one-time launch token and return bridge URL (opens in new tab to auto-login)
 router.post('/affiliate/:id/launch', authenticate, async (req, res) => {
   try {
@@ -107,7 +122,8 @@ router.post('/affiliate/:id/launch', authenticate, async (req, res) => {
       'INSERT INTO affiliate_launch_tokens (token, user_id, connection_id, expires_at) VALUES (?, ?, ?, ?)',
       [token, userId, id, expiresAt]
     );
-    const launchUrl = `${FRONTEND_URL}/integrations/affiliate/connect?token=${token}`;
+    const base = launchBaseUrl(req);
+    const launchUrl = `${base}/integrations/affiliate/connect?token=${token}`;
     res.json({ launchUrl });
   } catch (err) {
     console.error('Create launch token error:', err);
