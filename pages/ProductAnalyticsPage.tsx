@@ -155,6 +155,19 @@ export const ProductAnalyticsPage: React.FC = () => {
     return `M ${pts.join(' L ')}`;
   }
 
+  function getPointX(index: number): number {
+    const n = timeSeries?.length ?? 0;
+    if (n <= 0) return pad.left;
+    return pad.left + (n > 1 ? (index / (n - 1)) : 0.5) * innerW;
+  }
+
+  function getPointY(seriesIndex: number, pointIndex: number): number {
+    const s = series[seriesIndex];
+    if (!s || pointIndex < 0 || pointIndex >= s.values.length) return pad.top + innerH;
+    const v = s.values[pointIndex];
+    return pad.top + innerH - (v / s.max) * innerH;
+  }
+
   const xAxisLabelIndices =
     timeSeries?.length &&
     (() => {
@@ -345,12 +358,17 @@ export const ProductAnalyticsPage: React.FC = () => {
               <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm relative">
                 {hoveredDayIndex != null && timeSeries[hoveredDayIndex] && (
                   <div className="absolute left-4 right-4 top-3 z-10 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-lg">
-                    <p className="text-xs font-medium text-gray-500 mb-1">{timeSeries[hoveredDayIndex].date}</p>
-                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-gray-700">
-                      <span>Visiteurs: <strong>{timeSeries[hoveredDayIndex].visitors}</strong></span>
-                      <span>Clics CTA: <strong>{timeSeries[hoveredDayIndex].clicks}</strong></span>
-                      <span>Temps: <strong>{timeSeries[hoveredDayIndex].timeSpentSeconds} s</strong></span>
-                      <span>Commandes: <strong>{timeSeries[hoveredDayIndex].orders}</strong></span>
+                    <p className="text-xs font-medium text-gray-500 mb-1.5">
+                      <span className="text-gray-400">X (date):</span> <strong>{timeSeries[hoveredDayIndex].date}</strong>
+                    </p>
+                    <div className="space-y-1 text-sm text-gray-700">
+                      <p className="text-xs text-gray-400 mb-0.5">Y (valeurs):</p>
+                      <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+                        <span>Visiteurs: <strong>{timeSeries[hoveredDayIndex].visitors}</strong></span>
+                        <span>Clics CTA: <strong>{timeSeries[hoveredDayIndex].clicks}</strong></span>
+                        <span>Temps: <strong>{timeSeries[hoveredDayIndex].timeSpentSeconds} s</strong></span>
+                        <span>Commandes: <strong>{timeSeries[hoveredDayIndex].orders}</strong></span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -371,6 +389,26 @@ export const ProductAnalyticsPage: React.FC = () => {
                     {series.map((s) => (
                       <path key={s.key} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" d={lineChartPath(s.values, s.max)} />
                     ))}
+                    {/* Crosshairs and data points when hovering */}
+                    {hoveredDayIndex != null && timeSeries[hoveredDayIndex] && (() => {
+                      const x = getPointX(hoveredDayIndex);
+                      return (
+                        <g>
+                          {/* Vertical crosshair */}
+                          <line x1={x} y1={pad.top} x2={x} y2={pad.top + innerH} stroke="#94a3b8" strokeWidth="1" strokeDasharray="4,2" />
+                          {/* Horizontal crosshairs (from Y-axis to each data point) + dots */}
+                          {series.map((s, si) => {
+                            const y = getPointY(si, hoveredDayIndex);
+                            return (
+                              <g key={s.key}>
+                                <line x1={pad.left} y1={y} x2={x} y2={y} stroke={s.color} strokeWidth="1" strokeDasharray="2,2" opacity={0.7} />
+                                <circle cx={x} cy={y} r={4} fill={s.color} stroke="white" strokeWidth={1.5} />
+                              </g>
+                            );
+                          })}
+                        </g>
+                      );
+                    })()}
                     {/* Invisible hover strips per day */}
                     {timeSeries.map((r, i) => {
                       const n = timeSeries.length;
