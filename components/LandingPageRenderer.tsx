@@ -315,9 +315,16 @@ const CustomCodeRenderer: React.FC<{ htmlCode: string; product: Product; formSta
         .replace(/{product_image_2}/g, product.images[2] || '')
         .replace(/{product_image_3}/g, product.images[3] || '');
 
+    // Helper: escape user-provided shortcode params for safe HTML
+    const escapeParam = (s: string) => String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
     // --- Component shortcodes (build your own layout) ---
-    const notificationBarHtml = `<div class="tl-notification-bar bg-red-600 text-white text-center py-2 px-4 text-sm sm:text-base font-bold sticky top-0 z-50 shadow-md" dir="rtl">🚚 التوصيل بالمجان على جميع المنتجات - والدفع عند الاستلام</div>`;
-    processedHtml = processedHtml.replace(/{notification_bar}/g, notificationBarHtml);
+    // notification_bar: optional param = custom bar text. Example: {notification_bar|Free delivery}
+    processedHtml = processedHtml.replace(/\{notification_bar(?:\|([^}]*))?\}/g, (_, param) => {
+        const text = param != null && String(param).trim() ? escapeParam(String(param).trim()) : '🚚 التوصيل بالمجان على جميع المنتجات - والدفع عند الاستلام';
+        return `<div class="tl-notification-bar bg-red-600 text-white text-center py-2 px-4 text-sm sm:text-base font-bold sticky top-0 z-50 shadow-md" dir="rtl">${text}</div>`;
+    });
 
     const breadcrumbHtml = `<div class="tl-breadcrumb bg-gray-50 border-b border-gray-200 py-3" dir="rtl"><div class="max-w-7xl mx-auto px-4 flex items-center text-sm text-gray-500"><a href="/" class="hover:text-gray-700">الرئيسية</a><span class="mx-2">/</span><span class="text-gray-900 font-medium truncate">${product.name}</span></div></div>`;
     processedHtml = processedHtml.replace(/{breadcrumb}/g, breadcrumbHtml);
@@ -341,8 +348,11 @@ const CustomCodeRenderer: React.FC<{ htmlCode: string; product: Product; formSta
     processedHtml = processedHtml.replace(/{product_description_section}/g, descSectionHtml);
 
     const totalPrice = formatPrice(product.price * qty, product.currency);
-    const stickyCtaHtml = `<div class="tl-sticky-cta fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-40 flex items-center gap-4" dir="rtl"><div class="flex-1"><div class="text-xs text-gray-500 mb-1">السعر الإجمالي:</div><div class="text-xl font-black text-red-600 tl-total-price">${totalPrice}</div></div><button type="button" class="tl-scroll-to-form flex-1 bg-red-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg">اطلب الآن</button></div><div class="tl-sticky-cta-spacer h-24"></div>`;
-    processedHtml = processedHtml.replace(/{sticky_cta}/g, stickyCtaHtml);
+    // sticky_cta: optional param = button text. Example: {sticky_cta|Order Now}
+    processedHtml = processedHtml.replace(/\{sticky_cta(?:\|([^}]*))?\}/g, (_, param) => {
+        const btnText = param != null && String(param).trim() ? escapeParam(String(param).trim()) : 'اطلب الآن';
+        return `<div class="tl-sticky-cta fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-40 flex items-center gap-4" dir="rtl"><div class="flex-1"><div class="text-xs text-gray-500 mb-1">السعر الإجمالي:</div><div class="text-xl font-black text-red-600 tl-total-price">${totalPrice}</div></div><button type="button" class="tl-scroll-to-form flex-1 bg-red-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg">${btnText}</button></div><div class="tl-sticky-cta-spacer h-24"></div>`;
+    });
 
     // Combine images and videos
     const allMedia: Array<{ type: 'image' | 'video'; src: string }> = [];

@@ -8,7 +8,7 @@ import {
 import { LandingPageRenderer } from '../components/LandingPageRenderer';
 
 const AVAILABLE_TAGS = [
-    { tag: '{notification_bar}', desc: 'Bandeau sticky (livraison gratuite, COD)' },
+    { tag: '{notification_bar}', desc: 'Bandeau sticky. Option: {notification_bar|Votre texte}' },
     { tag: '{breadcrumb}', desc: 'Fil d’Ariane (Accueil / Produit)' },
     { tag: '{product_name}', desc: 'Nom du produit' },
     { tag: '{product_price}', desc: 'Prix de vente' },
@@ -24,7 +24,7 @@ const AVAILABLE_TAGS = [
     { tag: '{trust_badges}', desc: 'Badges confiance (livraison, paiement)' },
     { tag: '{product_description}', desc: 'Description brute (HTML ou texte)' },
     { tag: '{product_description_section}', desc: 'Section « Description » avec titre' },
-    { tag: '{sticky_cta}', desc: 'Barre fixe bas (total + bouton « Commander »)' },
+    { tag: '{sticky_cta}', desc: 'Barre fixe bas. Option: {sticky_cta|Order Now}' },
 ];
 
 const DEFAULT_CODE_BOILERPLATE = `

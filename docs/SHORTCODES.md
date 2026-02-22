@@ -4,7 +4,7 @@ Use these shortcodes in **Code** templates (Modèle de landing page → mode Cod
 
 | Shortcode | Description |
 |-----------|-------------|
-| `{notification_bar}` | Sticky top bar: free delivery + pay on delivery (Arabic). |
+| `{notification_bar}` or `{notification_bar\|Your text}` | Sticky top bar. Default: Arabic. Custom text: `{notification_bar\|Free delivery}` |
 | `{breadcrumb}` | Breadcrumb: Home link + product name. |
 | `{product_name}` | Product name (text). |
 | `{product_price}` | Selling price (formatted). |
@@ -20,7 +20,7 @@ Use these shortcodes in **Code** templates (Modèle de landing page → mode Cod
 | `{trust_badges}` | Two trust badges (fast delivery, pay on delivery). |
 | `{product_description}` | Raw description (HTML or plain text). |
 | `{product_description_section}` | Section with “وصف المنتج” title + description. |
-| `{sticky_cta}` | Fixed bottom bar: total price + “اطلب الآن” (scrolls to form). |
+| `{sticky_cta}` or `{sticky_cta\|Order Now}` | Fixed bottom bar: total + button. Custom: `{sticky_cta|Order Now}` |
 
 ## Example: custom layout
 
@@ -50,3 +50,10 @@ Use these shortcodes in **Code** templates (Modèle de landing page → mode Cod
 ```
 
 Form fields and buttons are wired automatically (submit, quantity, payment method, attributes). The sticky CTA scrolls to `#order-form-container` (the `{order_form}` block is wrapped in that id).
+
+## Customizing shortcode text
+
+Some shortcodes accept an optional parameter after a pipe `|` to override the default text:
+
+- **`{sticky_cta|Order Now}`** — Use "Order Now" instead of "اطلب الآن" on the bottom bar button.
+- **`{notification_bar|Free delivery - Pay on delivery}`** — Use your own text for the top notification bar instead of the default Arabic message.

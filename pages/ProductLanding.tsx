@@ -711,45 +711,55 @@ export const ProductLanding: React.FC = () => {
                         <StripeConfirmForm onSuccess={() => setSubmitted(true)} />
                       </Elements>
                     ) : (
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* Attributes */}
-                        {attributes.map((attr) => (
-                            <div key={attr.name}>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">{attr.name}:</label>
-                                <div className="flex flex-wrap gap-2">
-                                    {attr.options.map((option) => (
-                                        <label key={option} className={`
-                                            cursor-pointer px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all
-                                            ${selectedAttributes[attr.name] === option 
-                                                ? 'border-red-600 bg-red-50 text-red-700' 
-                                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}
-                                        `}>
-                                            <input 
-                                                type="radio" 
-                                                name={attr.name} 
-                                                value={option} 
-                                                className="sr-only" 
-                                                checked={selectedAttributes[attr.name] === option}
-                                                onChange={() => handleAttributeChange(attr.name, option)}
-                                            />
-                                            {option}
-                                        </label>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Product attributes - separate section */}
+                        {attributes.length > 0 && (
+                            <div className="pb-4 border-b border-gray-200">
+                                <h4 className="text-sm font-bold text-gray-800 mb-3">المواصفات</h4>
+                                <div className="space-y-3">
+                                    {attributes.map((attr) => (
+                                        <div key={attr.name}>
+                                            <label className="block text-sm font-bold text-gray-700 mb-2">{attr.name}:</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {attr.options.map((option) => (
+                                                    <label key={option} className={`
+                                                        cursor-pointer px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all
+                                                        ${selectedAttributes[attr.name] === option 
+                                                            ? 'border-red-600 bg-red-50 text-red-700' 
+                                                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}
+                                                    `}>
+                                                        <input 
+                                                            type="radio" 
+                                                            name={attr.name} 
+                                                            value={option} 
+                                                            className="sr-only" 
+                                                            checked={selectedAttributes[attr.name] === option}
+                                                            onChange={() => handleAttributeChange(attr.name, option)}
+                                                        />
+                                                        {option}
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
-                        ))}
+                        )}
 
-                        {/* Quantity */}
-                        <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            <span className="font-bold text-gray-700">الكمية:</span>
-                            <div className="flex items-center gap-4">
-                                <button type="button" onClick={() => { trackClick('cta_click'); setQuantity(Math.max(1, quantity - 1)); }} className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-red-600">
-                                    <Minus size={16} />
-                                </button>
-                                <span className="font-black text-xl w-6 text-center">{quantity}</span>
-                                <button type="button" onClick={() => { trackClick('cta_click'); setQuantity(quantity + 1); }} className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-green-600">
-                                    <Plus size={16} />
-                                </button>
+                        {/* Quantity - separate section */}
+                        <div className="pb-4 border-b border-gray-200">
+                            <h4 className="text-sm font-bold text-gray-800 mb-3">الكمية</h4>
+                            <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-200">
+                                <span className="font-bold text-gray-700">الكمية:</span>
+                                <div className="flex items-center gap-4">
+                                    <button type="button" onClick={() => { trackClick('cta_click'); setQuantity(Math.max(1, quantity - 1)); }} className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-red-600">
+                                        <Minus size={16} />
+                                    </button>
+                                    <span className="font-black text-xl w-6 text-center">{quantity}</span>
+                                    <button type="button" onClick={() => { trackClick('cta_click'); setQuantity(quantity + 1); }} className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-100 text-green-600">
+                                        <Plus size={16} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -770,8 +780,10 @@ export const ProductLanding: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Inputs */}
-                        <div className="space-y-3">
+                        {/* Contact / delivery details - separate section */}
+                        <div>
+                            <h4 className="text-sm font-bold text-gray-800 mb-3">معلومات التوصيل</h4>
+                            <div className="space-y-3">
                             <div>
                                 <input 
                                     type="text" 
@@ -813,6 +825,7 @@ export const ProductLanding: React.FC = () => {
                                     onChange={e => setFormData({...formData, address: e.target.value})} 
                                     className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 py-3 px-4 text-right bg-gray-50 focus:bg-white transition-colors" 
                                 />
+                            </div>
                             </div>
                         </div>
 
