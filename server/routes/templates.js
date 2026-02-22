@@ -61,28 +61,43 @@ router.get('/:id', async (req, res) => {
 router.post('/', authenticate, async (req, res) => {
   try {
     const userId = req.userId; // From authenticate middleware
-    
+
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
     const { name, mode = 'visual', elements, layout, htmlCode } = req.body;
 
-    if (!name) {
+    if (!name || String(name).trim() === '') {
       return res.status(400).json({ error: 'Name is required' });
     }
 
     const id = `tpl_${uuidv4()}`;
     const elementsJson = JSON.stringify(elements || []);
     const layoutJson = layout ? JSON.stringify(layout) : null;
-    const htmlCodeValue = htmlCode || null;
+    const htmlCodeValue = htmlCode != null && htmlCode !== '' ? String(htmlCode) : null;
 
-    await db.execute(
-      `INSERT INTO landing_page_templates (
-        id, owner_id, name, mode, elements, layout, html_code
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, userId, name, mode, elementsJson, layoutJson, htmlCodeValue]
-    );
+    try {
+      await db.execute(
+        `INSERT INTO landing_page_templates (
+          id, owner_id, name, mode, elements, layout, html_code
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [id, userId, String(name).trim(), mode, elementsJson, layoutJson, htmlCodeValue]
+      );
+    } catch (insertErr) {
+      const msg = (insertErr.message || '').toLowerCase();
+      // If layout column is missing (older DB), retry without it
+      if (msg.includes("unknown column 'layout'")) {
+        await db.execute(
+          `INSERT INTO landing_page_templates (
+            id, owner_id, name, mode, elements, html_code
+          ) VALUES (?, ?, ?, ?, ?, ?)`,
+          [id, userId, String(name).trim(), mode, elementsJson, htmlCodeValue]
+        );
+      } else {
+        throw insertErr;
+      }
+    }
 
     const [templates] = await db.execute(
       'SELECT * FROM landing_page_templates WHERE id = ?',
@@ -91,8 +106,11 @@ router.post('/', authenticate, async (req, res) => {
 
     res.status(201).json({ template: formatTemplate(templates[0]) });
   } catch (error) {
-    console.error('Create template error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Create template error:', error.message || error, error.stack);
+    const msg = process.env.NODE_ENV === 'production'
+      ? 'Internal server error'
+      : (error.message || String(error));
+    res.status(500).json({ error: msg });
   }
 });
 
