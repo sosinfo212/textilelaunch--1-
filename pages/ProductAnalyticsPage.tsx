@@ -357,14 +357,15 @@ export const ProductAnalyticsPage: React.FC = () => {
               </h2>
               <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm relative">
                 {hoveredDayIndex != null && timeSeries[hoveredDayIndex] && (
-                  <div className="absolute left-4 top-3 z-10 max-w-[320px] rounded border border-gray-200 bg-white/95 px-2.5 py-1.5 shadow-md backdrop-blur-sm">
+                  <div className="absolute left-4 top-3 z-10 max-w-[360px] rounded border border-gray-200 bg-white/95 px-2.5 py-1.5 shadow-md backdrop-blur-sm">
                     <p className="text-[11px] font-medium text-gray-700 mb-1">{timeSeries[hoveredDayIndex].date}</p>
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-600">
-                      <span>Vis. <strong className="text-gray-800">{timeSeries[hoveredDayIndex].visitors}</strong></span>
-                      <span>CTA <strong className="text-gray-800">{timeSeries[hoveredDayIndex].clicks}</strong></span>
-                      <span>Temps <strong className="text-gray-800">{timeSeries[hoveredDayIndex].timeSpentSeconds}s</strong></span>
-                      <span>Cmd <strong className="text-gray-800">{timeSeries[hoveredDayIndex].orders}</strong></span>
+                      <span>Vis. <strong className="text-gray-800">{timeSeries[hoveredDayIndex].visitors}</strong> ({maxVisitors > 0 ? Math.round((100 * timeSeries[hoveredDayIndex].visitors) / maxVisitors) : 0}%)</span>
+                      <span>CTA <strong className="text-gray-800">{timeSeries[hoveredDayIndex].clicks}</strong> ({maxClicks > 0 ? Math.round((100 * timeSeries[hoveredDayIndex].clicks) / maxClicks) : 0}%)</span>
+                      <span>Temps <strong className="text-gray-800">{timeSeries[hoveredDayIndex].timeSpentSeconds}s</strong> ({maxTime > 0 ? Math.round((100 * timeSeries[hoveredDayIndex].timeSpentSeconds) / maxTime) : 0}%)</span>
+                      <span>Cmd <strong className="text-gray-800">{timeSeries[hoveredDayIndex].orders}</strong> ({maxOrders > 0 ? Math.round((100 * timeSeries[hoveredDayIndex].orders) / maxOrders) : 0}%)</span>
                     </div>
+                    <p className="text-[10px] text-gray-400 mt-1">Y = % du max sur la période</p>
                   </div>
                 )}
                 <div className="overflow-x-auto">
@@ -433,7 +434,7 @@ export const ProductAnalyticsPage: React.FC = () => {
                     })}
                   </svg>
                 </div>
-                <p className="text-xs text-gray-400 mt-1 pl-1">Axe Y : échelle relative (0–100) par indicateur. Survolez le graphique pour voir les valeurs.</p>
+                <p className="text-xs text-gray-400 mt-1 pl-1">Axe Y : 0–100 = % du max de chaque indicateur sur la période (ex. Cmd 1 à 25 = 1 commande = 25% du max). Survolez pour voir les valeurs.</p>
                 <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-gray-100 justify-center sm:justify-start">
                   {series.map((s) => (
                     <span key={s.key} className="inline-flex items-center gap-1.5 text-xs text-gray-600">
