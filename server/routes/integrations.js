@@ -134,12 +134,28 @@ router.get('/affiliate/launch', async (req, res) => {
     }
     const r = rows[0];
     await db.execute('DELETE FROM affiliate_launch_tokens WHERE token = ?', [token]);
+
+    let csrfToken = null;
+    try {
+      const loginPageRes = await fetch(r.login_url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TextileLaunch/1.0)' }
+      });
+      const html = await loginPageRes.text();
+      const hiddenMatch = html.match(/name=["']_token["']\s+value=["']([^"']+)["']/i);
+      const metaMatch = html.match(/<meta\s+name=["']csrf-token["']\s+content=["']([^"']+)["']/i);
+      if (hiddenMatch) csrfToken = hiddenMatch[1];
+      else if (metaMatch) csrfToken = metaMatch[1];
+    } catch (e) {
+      console.warn('Could not fetch CSRF token from login page:', e.message);
+    }
+
     res.json({
       loginUrl: r.login_url,
       email: decrypt(r.email_encrypted),
       password: decrypt(r.password_encrypted),
       loginFieldName: 'email',
-      passwordFieldName: 'password'
+      passwordFieldName: 'password',
+      csrfToken: csrfToken || undefined
     });
   } catch (err) {
     console.error('Launch affiliate error:', err);

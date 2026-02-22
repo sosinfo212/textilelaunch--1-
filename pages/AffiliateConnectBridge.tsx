@@ -49,6 +49,14 @@ export const AffiliateConnectBridge: React.FC = () => {
         inputPassword.value = creds.password;
         form.appendChild(inputPassword);
 
+        if (creds.csrfToken) {
+          const inputToken = document.createElement('input');
+          inputToken.type = 'hidden';
+          inputToken.name = '_token';
+          inputToken.value = creds.csrfToken;
+          form.appendChild(inputToken);
+        }
+
         document.body.appendChild(form);
         form.submit();
       } catch (e: any) {
