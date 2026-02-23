@@ -1,13 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
-import { Tag, Package, ChevronRight, Layers, Plus, X } from 'lucide-react';
+import { Tag, Package, ChevronRight, Layers, Plus, X, Trash2 } from 'lucide-react';
 import { Product } from '../types';
 
 export const CategoryList: React.FC = () => {
-  const { products, categories, addCategory } = useStore();
+  const { products, categories, addCategory, deleteProducts } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Combine managed categories with any loose strings found in products (just in case)
   // and map products to them.
@@ -49,6 +51,49 @@ export const CategoryList: React.FC = () => {
       }
   };
 
+  const toggleSelect = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllInCategory = (items: Product[]) => {
+    const ids = items.map(p => p.id);
+    const allSelected = ids.every(id => selectedIds.has(id));
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allSelected) ids.forEach(id => next.delete(id));
+      else ids.forEach(id => next.add(id));
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedIds.size === products.length && products.length > 0) setSelectedIds(new Set());
+    else setSelectedIds(new Set(products.map(p => p.id)));
+  };
+
+  const handleBulkDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Supprimer ${selectedIds.size} produit(s) ? Cette action est irréversible.`)) return;
+    setBulkDeleting(true);
+    try {
+      await deleteProducts(Array.from(selectedIds));
+      setSelectedIds(new Set());
+    } catch (err) {
+      alert('Erreur lors de la suppression des produits');
+      console.error(err);
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 relative">
       <div className="flex justify-between items-end">
@@ -58,7 +103,7 @@ export const CategoryList: React.FC = () => {
             Gérez vos catégories et visualisez votre inventaire.
           </p>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex flex-wrap items-center gap-3">
              <button
                 onClick={() => setIsModalOpen(true)}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
@@ -73,6 +118,28 @@ export const CategoryList: React.FC = () => {
             <Plus className="mr-2 h-4 w-4" />
             Ajouter un produit
             </Link>
+            {products.length > 0 && (
+              <>
+                <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === products.length}
+                    onChange={selectAll}
+                    className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                  />
+                  Tout sélectionner
+                </label>
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  disabled={selectedIds.size === 0 || bulkDeleting}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-300 text-red-700 text-sm font-medium rounded-md bg-white hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {bulkDeleting ? 'Suppression...' : `Supprimer (${selectedIds.size})`}
+                </button>
+              </>
+            )}
         </div>
       </div>
 
@@ -104,8 +171,18 @@ export const CategoryList: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  {isEmpty && (
-                      <span className="text-xs text-gray-400 italic">Vide</span>
+                  {!isEmpty ? (
+                    <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={items.length > 0 && items.every(p => selectedIds.has(p.id))}
+                        onChange={() => selectAllInCategory(items)}
+                        className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                      />
+                      Tout dans cette catégorie
+                    </label>
+                  ) : (
+                    <span className="text-xs text-gray-400 italic">Vide</span>
                   )}
                 </div>
                 
@@ -113,17 +190,22 @@ export const CategoryList: React.FC = () => {
                 {!isEmpty && (
                     <ul className="divide-y divide-gray-200">
                     {items.map((product) => (
-                        <li key={product.id}>
-                        <Link to={`/edit-product/${product.id}`} className="block hover:bg-gray-50 transition">
-                            <div className="px-6 py-4 flex items-center">
-                            <div className="flex-shrink-0 h-12 w-12 bg-gray-200 rounded-md overflow-hidden">
+                        <li key={product.id} className="hover:bg-gray-50 transition flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(product.id)}
+                          onClick={(e) => toggleSelect(product.id, e)}
+                          className="ml-4 flex-shrink-0 rounded border-gray-300 text-brand-600 focus:ring-brand-500 h-4 w-4"
+                        />
+                        <Link to={`/edit-product/${product.id}`} className="flex-1 flex items-center min-w-0 py-4 pr-4">
+                            <div className="flex-shrink-0 h-12 w-12 bg-gray-200 rounded-md overflow-hidden ml-3">
                                 {product.images[0] ? (
                                     <img src={product.images[0]} alt="" className="h-full w-full object-cover" />
                                 ) : (
                                     <Package className="h-6 w-6 text-gray-400 m-3" />
                                 )}
                             </div>
-                            <div className="ml-4 flex-1">
+                            <div className="ml-4 flex-1 min-w-0">
                                 <div className="flex items-center justify-between">
                                     <p className="text-sm font-medium text-brand-600 truncate">{product.name}</p>
                                     <div className="ml-2 flex-shrink-0 flex">
@@ -138,9 +220,8 @@ export const CategoryList: React.FC = () => {
                                     </p>
                                 </div>
                             </div>
-                            <div className="ml-5 flex-shrink-0">
+                            <div className="flex-shrink-0">
                                 <ChevronRight className="h-5 w-5 text-gray-400" />
-                            </div>
                             </div>
                         </Link>
                         </li>
