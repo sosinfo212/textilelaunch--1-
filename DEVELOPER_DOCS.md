@@ -134,6 +134,7 @@ You need to implement the following API routes to replace `StoreContext.tsx` log
 - `GET /api/products`: Fetch products for the logged-in user (`WHERE owner_id = session.user.id`).
 - `GET /api/products/[id]`: Fetch specific product (Public access allowed for landing pages).
 - `POST /api/products`: Create new product.
+- `POST /api/products/import`: **Bulk import** products. Body: `{ products: [...], skipInvalid?: boolean }`. See [docs/API_PRODUCTS_IMPORT.md](docs/API_PRODUCTS_IMPORT.md) for parameters and examples.
 - `PUT /api/products/[id]`: Update product.
 
 ### C. Orders
