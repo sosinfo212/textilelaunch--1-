@@ -267,7 +267,7 @@ export const SettingsPage: React.FC = () => {
                                                                     const res = await import('../src/utils/api').then(m => m.settingsAPI.getApiKey());
                                                                     if (res.apiKey) setViewApiKeyModal(res.apiKey);
                                                                     else setApiKeyError((res as { reason?: string }).reason === 'key_created_before_storage'
-                                                                        ? 'Cette clé a été créée avant l’enregistrement. Régénérez la clé (icône ⟳) pour pouvoir la consulter.'
+                                                                        ? 'key_created_before_storage'
                                                                         : 'Clé introuvable.');
                                                                 } catch (e: any) {
                                                                     setApiKeyError(e?.message || 'Erreur.');
@@ -356,7 +356,34 @@ export const SettingsPage: React.FC = () => {
                                             </div>
                                         )}
                                         {newApiKey && <p className="mt-2 text-xs text-amber-700">Clé enregistrée. Vous pouvez la voir ou la régénérer plus tard.</p>}
-                                        {apiKeyError && <p className="mt-2 text-xs text-red-600">{apiKeyError}</p>}
+                                        {apiKeyError === 'key_created_before_storage' && (
+                                            <div className="mt-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                                                <p className="text-sm text-amber-800 mb-2">Cette clé a été créée avant l’enregistrement. Régénérez la clé pour pouvoir la consulter ensuite.</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        if (!window.confirm('Remplacer la clé actuelle ? L’ancienne ne fonctionnera plus.')) return;
+                                                        setApiKeyError('');
+                                                        setApiKeyGenerating(true);
+                                                        try {
+                                                            const res = await import('../src/utils/api').then(m => m.settingsAPI.generateApiKey());
+                                                            setNewApiKey(res.apiKey);
+                                                            setViewApiKeyModal(null);
+                                                            await refreshSettings();
+                                                        } catch (e: any) {
+                                                            setApiKeyError(e?.message || 'Erreur lors de la régénération.');
+                                                        } finally {
+                                                            setApiKeyGenerating(false);
+                                                        }
+                                                    }}
+                                                    disabled={apiKeyGenerating}
+                                                    className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
+                                                >
+                                                    {apiKeyGenerating ? 'Régénération...' : 'Régénérer la clé'}
+                                                </button>
+                                            </div>
+                                        )}
+                                        {apiKeyError && apiKeyError !== 'key_created_before_storage' && <p className="mt-2 text-xs text-red-600">{apiKeyError}</p>}
                                     </div>
                                 </div>
                             </section>
