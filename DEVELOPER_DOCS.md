@@ -1,5 +1,14 @@
 # TextileLaunch Developer Documentation
 
+## API documentation (Swagger)
+
+The REST API is documented with **OpenAPI 3.0** and served by **Swagger UI**.
+
+- **URL:** When the server is running, open **`/api-docs`** (e.g. `http://localhost:5001/api-docs`).
+- **Auth:** Endpoints support session cookie (after login) or API key: `Authorization: Bearer <key>` or `X-API-Key: <key>`.
+
+---
+
 ## 1. Overview
 TextileLaunch is a SaaS platform designed for textile sellers to generate high-converting landing pages. 
 Currently, the application runs as a **Client-Side React Application (SPA)** using `localStorage` for data persistence.
