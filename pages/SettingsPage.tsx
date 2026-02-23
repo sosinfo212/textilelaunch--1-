@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image, ExternalLink, Copy, Check } from 'lucide-react';
+import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image, ExternalLink, Copy, Check, Eye, RefreshCw } from 'lucide-react';
 import { User as UserType } from '../types';
 
 export const SettingsPage: React.FC = () => {
@@ -10,11 +10,13 @@ export const SettingsPage: React.FC = () => {
     const { user, users, addUser, updateUser, deleteUser } = useAuth();
     const [activeTab, setActiveTab] = useState<'general' | 'users'>('general');
 
-    // API key (shown once after generate)
+    // API key (shown once after generate; view modal for stored key)
     const [newApiKey, setNewApiKey] = useState<string | null>(null);
     const [apiKeyGenerating, setApiKeyGenerating] = useState(false);
     const [apiKeyError, setApiKeyError] = useState('');
     const [apiKeyCopied, setApiKeyCopied] = useState(false);
+    const [viewApiKeyModal, setViewApiKeyModal] = useState<string | null>(null); // key value when open, null when closed
+    const [viewApiKeyLoading, setViewApiKeyLoading] = useState(false);
 
     // Settings Form
     const [shopName, setShopName] = useState(settings.shopName);
@@ -254,6 +256,54 @@ export const SettingsPage: React.FC = () => {
                                                 <span className="text-sm text-gray-600">
                                                     {settings.hasApiKey ? 'Clé configurée (••••••••)' : 'Aucune clé'}
                                                 </span>
+                                                {settings.hasApiKey && (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            onClick={async () => {
+                                                                setApiKeyError('');
+                                                                setViewApiKeyLoading(true);
+                                                                try {
+                                                                    const res = await import('../src/utils/api').then(m => m.settingsAPI.getApiKey());
+                                                                    if (res.apiKey) setViewApiKeyModal(res.apiKey);
+                                                                    else setApiKeyError('Clé introuvable.');
+                                                                } catch (e: any) {
+                                                                    setApiKeyError(e?.message || 'Erreur.');
+                                                                } finally {
+                                                                    setViewApiKeyLoading(false);
+                                                                }
+                                                            }}
+                                                            disabled={viewApiKeyLoading}
+                                                            className="p-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                                                            title="Voir la clé"
+                                                        >
+                                                            <Eye size={18} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={async () => {
+                                                                if (!window.confirm('Remplacer la clé actuelle ? L’ancienne ne fonctionnera plus.')) return;
+                                                                setApiKeyError('');
+                                                                setApiKeyGenerating(true);
+                                                                try {
+                                                                    const res = await import('../src/utils/api').then(m => m.settingsAPI.generateApiKey());
+                                                                    setNewApiKey(res.apiKey);
+                                                                    setViewApiKeyModal(null);
+                                                                    await refreshSettings();
+                                                                } catch (e: any) {
+                                                                    setApiKeyError(e?.message || 'Erreur lors de la régénération.');
+                                                                } finally {
+                                                                    setApiKeyGenerating(false);
+                                                                }
+                                                            }}
+                                                            disabled={apiKeyGenerating}
+                                                            className="p-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                                                            title="Régénérer la clé"
+                                                        >
+                                                            <RefreshCw size={18} className={apiKeyGenerating ? 'animate-spin' : ''} />
+                                                        </button>
+                                                    </>
+                                                )}
                                                 <button
                                                     type="button"
                                                     onClick={async () => {
@@ -262,6 +312,7 @@ export const SettingsPage: React.FC = () => {
                                                         try {
                                                             const res = await import('../src/utils/api').then(m => m.settingsAPI.generateApiKey());
                                                             setNewApiKey(res.apiKey);
+                                                            setViewApiKeyModal(null);
                                                             await refreshSettings();
                                                         } catch (e: any) {
                                                             setApiKeyError(e?.message || 'Erreur lors de la génération.');
@@ -276,7 +327,33 @@ export const SettingsPage: React.FC = () => {
                                                 </button>
                                             </div>
                                         )}
-                                        {newApiKey && <p className="mt-2 text-xs text-amber-700">Copiez la clé maintenant. Elle ne sera plus affichée.</p>}
+                                        {viewApiKeyModal !== null && (
+                                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setViewApiKeyModal(null)}>
+                                                <div className="bg-white rounded-xl shadow-xl p-6 max-w-lg w-full mx-4" onClick={e => e.stopPropagation()}>
+                                                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Clé API</h3>
+                                                    <div className="flex gap-2 mb-4">
+                                                        <input type="text" readOnly value={viewApiKeyModal} className="flex-1 font-mono text-sm border border-gray-300 rounded-lg py-2 px-3 bg-gray-50" />
+                                                        <button
+                                                            type="button"
+                                                            onClick={async () => {
+                                                                try {
+                                                                    await navigator.clipboard.writeText(viewApiKeyModal);
+                                                                    setApiKeyCopied(true);
+                                                                    setTimeout(() => setApiKeyCopied(false), 2000);
+                                                                } catch {}
+                                                            }}
+                                                            className="flex items-center gap-1.5 px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium shrink-0"
+                                                        >
+                                                            {apiKeyCopied ? <Check size={16} /> : <Copy size={16} />}
+                                                            {apiKeyCopied ? 'Copié' : 'Copier'}
+                                                        </button>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 mb-4">Utilisez cette clé dans l’en-tête : <code className="bg-gray-200 px-1 rounded">Authorization: Bearer &lt;clé&gt;</code></p>
+                                                    <button type="button" onClick={() => setViewApiKeyModal(null)} className="w-full py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Fermer</button>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {newApiKey && <p className="mt-2 text-xs text-amber-700">Clé enregistrée. Vous pouvez la voir ou la régénérer plus tard.</p>}
                                         {apiKeyError && <p className="mt-2 text-xs text-red-600">{apiKeyError}</p>}
                                     </div>
                                 </div>

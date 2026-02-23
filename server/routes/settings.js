@@ -178,7 +178,7 @@ router.put('/', authenticate, async (req, res) => {
   }
 });
 
-// Generate API key (authenticated user only). Key is shown once; only hash is stored.
+// Generate or regenerate API key. Saves hash (for auth) and plaintext (for viewing).
 router.post('/generate-api-key', authenticate, async (req, res) => {
   try {
     const userId = req.userId;
@@ -189,17 +189,32 @@ router.post('/generate-api-key', authenticate, async (req, res) => {
 
     const [existing] = await db.execute('SELECT user_id FROM app_settings WHERE user_id = ?', [userId]);
     if (existing.length === 0) {
-      await db.execute(
-        'INSERT INTO app_settings (user_id, shop_name, api_key_hash) VALUES (?, ?, ?)',
-        [userId, 'Trendy Cosmetix Store', apiKeyHash]
-      );
+      try {
+        await db.execute(
+          'INSERT INTO app_settings (user_id, shop_name, api_key_hash, api_key_plaintext) VALUES (?, ?, ?, ?)',
+          [userId, 'Trendy Cosmetix Store', apiKeyHash, rawKey]
+        );
+      } catch (e) {
+        if (e.code === 'ER_BAD_FIELD_ERROR' && e.message.includes('api_key_plaintext')) {
+          await db.execute(
+            'INSERT INTO app_settings (user_id, shop_name, api_key_hash) VALUES (?, ?, ?)',
+            [userId, 'Trendy Cosmetix Store', apiKeyHash]
+          );
+        } else throw e;
+      }
     } else {
-      await db.execute('UPDATE app_settings SET api_key_hash = ? WHERE user_id = ?', [apiKeyHash, userId]);
+      try {
+        await db.execute('UPDATE app_settings SET api_key_hash = ?, api_key_plaintext = ? WHERE user_id = ?', [apiKeyHash, rawKey, userId]);
+      } catch (e) {
+        if (e.code === 'ER_BAD_FIELD_ERROR' && e.message.includes('api_key_plaintext')) {
+          await db.execute('UPDATE app_settings SET api_key_hash = ? WHERE user_id = ?', [apiKeyHash, userId]);
+        } else throw e;
+      }
     }
 
     res.status(201).json({
       apiKey: rawKey,
-      message: 'Copy this key now. It will not be shown again. Use it in the Authorization header: Bearer <key>',
+      message: 'Key saved. You can view or regenerate it from Settings.',
     });
   } catch (error) {
     if (error.code === 'ER_BAD_FIELD_ERROR' && error.message.includes('api_key_hash')) {
@@ -208,6 +223,26 @@ router.post('/generate-api-key', authenticate, async (req, res) => {
       });
     }
     console.error('Generate API key error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get stored API key for viewing (authenticated owner only).
+router.get('/api-key', authenticate, async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+    const [rows] = await db.execute(
+      'SELECT api_key_plaintext FROM app_settings WHERE user_id = ? LIMIT 1',
+      [userId]
+    );
+    const apiKey = rows.length > 0 && rows[0].api_key_plaintext ? rows[0].api_key_plaintext : null;
+    return res.json({ apiKey });
+  } catch (error) {
+    if (error.code === 'ER_BAD_FIELD_ERROR' && error.message.includes('api_key_plaintext')) {
+      return res.json({ apiKey: null });
+    }
+    console.error('Get API key error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

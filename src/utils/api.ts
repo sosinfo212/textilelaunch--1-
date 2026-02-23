@@ -277,11 +277,16 @@ export const settingsAPI = {
     });
   },
   
-  /** Generate a new API key. Returns the key once; store it securely. */
+  /** Generate or regenerate API key. Saves to DB; can be viewed later. */
   generateApiKey: async () => {
     return apiRequest<{ apiKey: string; message: string }>('/settings/generate-api-key', {
       method: 'POST',
     });
+  },
+
+  /** Get stored API key for viewing (authenticated owner only). */
+  getApiKey: async () => {
+    return apiRequest<{ apiKey: string | null }>('/settings/api-key');
   },
 };
 
