@@ -147,6 +147,13 @@ export const productsAPI = {
     });
   },
 
+  deleteMany: async (ids: string[]) => {
+    return apiRequest<{ deleted: string[]; message: string }>('/products/bulk-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    });
+  },
+
   recordView: async (
     productId: string,
     sessionId: string,

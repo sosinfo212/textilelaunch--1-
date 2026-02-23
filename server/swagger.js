@@ -145,6 +145,27 @@ const openApiSpec = {
         },
       },
     },
+    '/api/products/bulk-delete': {
+      post: {
+        summary: 'Bulk delete products',
+        description: 'Delete multiple products by ID. Only products owned by the authenticated user are deleted.',
+        tags: ['Products'],
+        security: [{ cookie: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['ids'],
+                properties: { ids: { type: 'array', items: { type: 'string' }, description: 'Product IDs' } },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: '{ deleted: string[], message: string }' }, 401: { description: 'Unauthorized' } },
+      },
+    },
     '/api/products/{id}': {
       get: { summary: 'Get product', tags: ['Products'], security: [{ cookie: [] }, { bearerAuth: [] }], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Product' } } },
       put: { summary: 'Update product', tags: ['Products'], security: [{ cookie: [] }, { bearerAuth: [] }], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Updated' } } },

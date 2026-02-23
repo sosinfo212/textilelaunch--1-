@@ -152,6 +152,39 @@ router.post('/import', authenticate, async (req, res) => {
   }
 });
 
+// Bulk delete products (authenticated, owner only)
+router.post('/bulk-delete', authenticate, async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Request body must include an "ids" array of product IDs.' });
+    }
+
+    const placeholders = ids.map(() => '?').join(',');
+    const [owned] = await db.execute(
+      `SELECT id FROM products WHERE owner_id = ? AND id IN (${placeholders})`,
+      [userId, ...ids]
+    );
+    const ownedIds = owned.map(r => r.id);
+    if (ownedIds.length === 0) {
+      return res.json({ deleted: [], message: 'No products to delete.' });
+    }
+
+    for (const id of ownedIds) {
+      await db.execute('DELETE FROM product_views WHERE product_id = ?', [id]).catch(() => {});
+      await db.execute('DELETE FROM products WHERE id = ?', [id]);
+    }
+
+    res.json({ deleted: ownedIds, message: `Deleted ${ownedIds.length} product(s).` });
+  } catch (error) {
+    console.error('Bulk delete products error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Create product
 router.post('/', authenticate, async (req, res) => {
   try {

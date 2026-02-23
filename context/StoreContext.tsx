@@ -19,6 +19,7 @@ interface StoreContextType {
   addProduct: (product: Product) => Promise<void>;
   updateProduct: (product: Product) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
+  deleteProducts: (ids: string[]) => Promise<void>;
   addOrder: (order: Order) => Promise<void>;
   getProduct: (id: string) => Product | undefined; // Searches globally
   
@@ -246,6 +247,24 @@ landingPageTemplateId: product.landingPageTemplateId,
     }
   };
 
+  const deleteProducts = async (ids: string[]) => {
+    if (!user || ids.length === 0) return;
+    try {
+      const { deleted } = await productsAPI.deleteMany(ids);
+      const set = new Set(deleted);
+      setAllProducts(allProducts.filter(p => !set.has(p.id)));
+      setProducts(products.filter(p => !set.has(p.id)));
+      const remaining = products.filter(p => !set.has(p.id));
+      const uniqueCats = Array.from(
+        new Set(remaining.map(p => p.category).filter(Boolean) as string[])
+      );
+      setCategories(uniqueCats);
+    } catch (error) {
+      console.error('Error bulk deleting products:', error);
+      throw error;
+    }
+  };
+
   const addOrder = async (order: Order) => {
     try {
       const orderData = {
@@ -431,7 +450,7 @@ landingPageTemplateId: product.landingPageTemplateId,
   return (
     <StoreContext.Provider value={{ 
       allProducts, products, orders, templates, categories, unreadOrderCount, settings, loading,
-      addProduct, updateProduct, deleteProduct, addOrder, getProduct, updateOrderStatus, markOrderAsViewed, deleteOrder,
+      addProduct, updateProduct, deleteProduct, deleteProducts, addOrder, getProduct, updateOrderStatus, markOrderAsViewed, deleteOrder,
       addCategory,
       addTemplate, updateTemplate, deleteTemplate, getTemplate,
       updateSettings, getSettingsForUser, refreshSettings

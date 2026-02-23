@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { ExternalLink, Edit2, Tag, Box, Truck, Trash2, BarChart2 } from 'lucide-react';
 
 export const SellerDashboard: React.FC = () => {
-  const { products, deleteProduct } = useStore();
+  const { products, deleteProduct, deleteProducts } = useStore();
   const navigate = useNavigate();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const handleDeleteProduct = async (id: string, name: string) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${name}" ? Cette action est irréversible.`)) {
@@ -18,13 +20,64 @@ export const SellerDashboard: React.FC = () => {
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedIds.size === products.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(products.map(p => p.id)));
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Supprimer ${selectedIds.size} produit(s) ? Cette action est irréversible.`)) return;
+    setBulkDeleting(true);
+    try {
+      await deleteProducts(Array.from(selectedIds));
+      setSelectedIds(new Set());
+    } catch (error) {
+      alert('Erreur lors de la suppression des produits');
+      console.error(error);
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end">
+      <div className="flex justify-between items-end flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Vos Produits</h1>
           <p className="mt-1 text-sm text-gray-500">Gérez votre catalogue et accédez aux landing pages.</p>
         </div>
+        {products.length > 0 && (
+          <div className="flex items-center gap-3">
+            <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedIds.size === products.length && products.length > 0}
+                onChange={selectAll}
+                className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+              />
+              Tout sélectionner
+            </label>
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={selectedIds.size === 0 || bulkDeleting}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-300 text-red-700 text-sm font-medium rounded-md bg-white hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="h-4 w-4" />
+              {bulkDeleting ? 'Suppression...' : `Supprimer (${selectedIds.size})`}
+            </button>
+          </div>
+        )}
       </div>
 
       {products.length === 0 ? (
@@ -46,6 +99,15 @@ export const SellerDashboard: React.FC = () => {
           {products.map((product) => (
             <div key={product.id} className="bg-white overflow-hidden shadow rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
               <div className="aspect-w-16 aspect-h-9 bg-gray-200 h-48 overflow-hidden relative">
+                <div className="absolute top-2 left-2 z-10">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(product.id)}
+                    onChange={() => toggleSelect(product.id)}
+                    onClick={e => e.stopPropagation()}
+                    className="rounded border-gray-300 text-brand-600 focus:ring-brand-500 h-4 w-4 shadow"
+                  />
+                </div>
                 {product.images && product.images.length > 0 ? (
                   <img 
                     src={product.images[0]} 
