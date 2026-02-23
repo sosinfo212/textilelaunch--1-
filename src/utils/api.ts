@@ -3,6 +3,15 @@
 // Use relative URL when Vite proxy is configured, otherwise use full URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+/** Public URL to Swagger API documentation (same host as API). */
+export const getApiDocsUrl = (): string => {
+  const base = import.meta.env.VITE_API_URL || '/api';
+  if (typeof base === 'string' && base.startsWith('http')) {
+    return base.replace(/\/api\/?$/, '') + '/api-docs';
+  }
+  return '/api-docs';
+};
+
 // Get auth headers
 // No longer using localStorage - authentication is handled via HTTP-only cookies
 export const getAuthHeaders = (): HeadersInit => {

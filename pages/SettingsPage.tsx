@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image, ExternalLink, Copy, Check, Eye, RefreshCw } from 'lucide-react';
 import { User as UserType } from '../types';
+import { getApiDocsUrl } from '../src/utils/api';
 
 export const SettingsPage: React.FC = () => {
     const { settings, updateSettings, refreshSettings } = useStore();
@@ -227,6 +228,11 @@ export const SettingsPage: React.FC = () => {
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Clé API TextileLaunch</label>
                                         <p className="text-xs text-gray-500 mb-2">
                                             Pour appeler l’API (import produits, etc.) sans session. En-tête : <code className="bg-gray-200 px-1 rounded text-gray-700">Authorization: Bearer &lt;clé&gt;</code> ou <code className="bg-gray-200 px-1 rounded text-gray-700">X-API-Key: &lt;clé&gt;</code>.
+                                        </p>
+                                        <p className="text-xs text-gray-500 mb-2">
+                                            <a href={getApiDocsUrl()} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand-600 hover:underline">
+                                                <ExternalLink size={12} /> Documentation API (Swagger)
+                                            </a>
                                         </p>
                                         {newApiKey ? (
                                             <div className="flex gap-2">
