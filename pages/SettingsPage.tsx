@@ -266,7 +266,9 @@ export const SettingsPage: React.FC = () => {
                                                                 try {
                                                                     const res = await import('../src/utils/api').then(m => m.settingsAPI.getApiKey());
                                                                     if (res.apiKey) setViewApiKeyModal(res.apiKey);
-                                                                    else setApiKeyError('Clé introuvable.');
+                                                                    else setApiKeyError((res as { reason?: string }).reason === 'key_created_before_storage'
+                                                                        ? 'Cette clé a été créée avant l’enregistrement. Régénérez la clé (icône ⟳) pour pouvoir la consulter.'
+                                                                        : 'Clé introuvable.');
                                                                 } catch (e: any) {
                                                                     setApiKeyError(e?.message || 'Erreur.');
                                                                 } finally {

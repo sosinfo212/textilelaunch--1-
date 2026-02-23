@@ -233,14 +233,20 @@ router.get('/api-key', authenticate, async (req, res) => {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: 'Authentication required' });
     const [rows] = await db.execute(
-      'SELECT api_key_plaintext FROM app_settings WHERE user_id = ? LIMIT 1',
+      'SELECT api_key_hash, api_key_plaintext FROM app_settings WHERE user_id = ? LIMIT 1',
       [userId]
     );
-    const apiKey = rows.length > 0 && rows[0].api_key_plaintext ? rows[0].api_key_plaintext : null;
-    return res.json({ apiKey });
+    if (rows.length === 0) return res.json({ apiKey: null });
+    const plain = rows[0].api_key_plaintext;
+    const hasHash = !!rows[0].api_key_hash;
+    if (plain) return res.json({ apiKey: plain });
+    if (hasHash) return res.json({ apiKey: null, reason: 'key_created_before_storage' });
+    return res.json({ apiKey: null });
   } catch (error) {
     if (error.code === 'ER_BAD_FIELD_ERROR' && error.message.includes('api_key_plaintext')) {
-      return res.json({ apiKey: null });
+      const [rows] = await db.execute('SELECT api_key_hash FROM app_settings WHERE user_id = ? LIMIT 1', [req.userId]).catch(() => [[null]]);
+      const hasHash = rows.length > 0 && rows[0].api_key_hash;
+      return res.json({ apiKey: null, reason: hasHash ? 'key_created_before_storage' : undefined });
     }
     console.error('Get API key error:', error);
     res.status(500).json({ error: 'Internal server error' });
