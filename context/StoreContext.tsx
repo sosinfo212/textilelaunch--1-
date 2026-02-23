@@ -36,7 +36,7 @@ interface StoreContextType {
   // Settings
   updateSettings: (newSettings: AppSettings) => Promise<void>;
   getSettingsForUser: (userId: string) => AppSettings | undefined;
-  
+  refreshSettings: () => Promise<void>;
   // Loading states
   loading: boolean;
 }
@@ -414,6 +414,18 @@ landingPageTemplateId: product.landingPageTemplateId,
       return allSettings[userId] || { ...DEFAULT_SETTINGS, userId };
   };
 
+  const refreshSettings = async () => {
+      if (!user?.id) return;
+      try {
+        const settingsRes = await settingsAPI.get();
+        const userSettings = { ...DEFAULT_SETTINGS, ...settingsRes.settings, userId: user.id };
+        setSettings(userSettings);
+        setAllSettings(prev => ({ ...prev, [user.id]: userSettings }));
+      } catch (e) {
+        console.error('Refresh settings error:', e);
+      }
+  };
+
   const unreadOrderCount = orders.filter(o => !o.viewed).length;
 
   return (
@@ -422,7 +434,7 @@ landingPageTemplateId: product.landingPageTemplateId,
       addProduct, updateProduct, deleteProduct, addOrder, getProduct, updateOrderStatus, markOrderAsViewed, deleteOrder,
       addCategory,
       addTemplate, updateTemplate, deleteTemplate, getTemplate,
-      updateSettings, getSettingsForUser
+      updateSettings, getSettingsForUser, refreshSettings
     }}>
       {children}
     </StoreContext.Provider>

@@ -127,4 +127,5 @@ export interface AppSettings {
   tiktokPixelCode?: string;
   stripePublishableKey?: string;
   stripeSecretKey?: string;
+  hasApiKey?: boolean;
 }

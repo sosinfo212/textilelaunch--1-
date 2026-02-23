@@ -2,13 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image, ExternalLink } from 'lucide-react';
+import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image, ExternalLink, Copy, Check } from 'lucide-react';
 import { User as UserType } from '../types';
 
 export const SettingsPage: React.FC = () => {
-    const { settings, updateSettings } = useStore();
+    const { settings, updateSettings, refreshSettings } = useStore();
     const { user, users, addUser, updateUser, deleteUser } = useAuth();
     const [activeTab, setActiveTab] = useState<'general' | 'users'>('general');
+
+    // API key (shown once after generate)
+    const [newApiKey, setNewApiKey] = useState<string | null>(null);
+    const [apiKeyGenerating, setApiKeyGenerating] = useState(false);
+    const [apiKeyError, setApiKeyError] = useState('');
+    const [apiKeyCopied, setApiKeyCopied] = useState(false);
 
     // Settings Form
     const [shopName, setShopName] = useState(settings.shopName);
@@ -97,222 +103,298 @@ export const SettingsPage: React.FC = () => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-            <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
-            
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="border-b border-gray-200">
-                    <nav className="flex -mb-px">
+        <div className="max-w-4xl mx-auto">
+            <div className="mb-8">
+                <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
+                <p className="mt-1 text-sm text-gray-500">Boutique, paiement, API et tracking.</p>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <nav className="flex border-b border-gray-200 bg-gray-50/50">
+                    <button
+                        onClick={() => setActiveTab('general')}
+                        className={`py-3.5 px-5 text-sm font-medium border-b-2 flex items-center gap-2 transition-colors ${activeTab === 'general' ? 'border-brand-500 text-brand-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
+                    >
+                        <SettingsIcon size={18} />
+                        Général
+                    </button>
+                    {user?.role === 'admin' && (
                         <button
-                            onClick={() => setActiveTab('general')}
-                            className={`py-4 px-6 text-sm font-medium border-b-2 flex items-center ${activeTab === 'general' ? 'border-brand-500 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                            onClick={() => setActiveTab('users')}
+                            className={`py-3.5 px-5 text-sm font-medium border-b-2 flex items-center gap-2 transition-colors ${activeTab === 'users' ? 'border-brand-500 text-brand-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
                         >
-                            <SettingsIcon size={18} className="mr-2" />
-                            Général
+                            <User size={18} />
+                            Utilisateurs
                         </button>
-                        {user?.role === 'admin' && (
-                            <button
-                                onClick={() => setActiveTab('users')}
-                                className={`py-4 px-6 text-sm font-medium border-b-2 flex items-center ${activeTab === 'users' ? 'border-brand-500 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-                            >
-                                <User size={18} className="mr-2" />
-                                Utilisateurs
-                            </button>
-                        )}
-                    </nav>
-                </div>
+                    )}
+                </nav>
 
-                <div className="p-6">
+                <div className="p-6 md:p-8">
                     {activeTab === 'general' && (
-                        <form onSubmit={handleSaveSettings} className="space-y-6 max-w-lg">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Nom de la boutique</label>
-                                <div className="mt-1 relative rounded-md shadow-sm">
-                                    <input
-                                        type="text"
-                                        value={shopName}
-                                        onChange={e => setShopName(e.target.value)}
-                                        className="focus:ring-brand-500 focus:border-brand-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3"
-                                    />
+                        <form onSubmit={handleSaveSettings} className="max-w-2xl space-y-10">
+                            {/* Section: Boutique */}
+                            <section className="space-y-4">
+                                <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2 flex items-center gap-2">
+                                    <Image size={18} className="text-gray-500" />
+                                    Boutique
+                                </h2>
+                                <div className="grid gap-4 sm:grid-cols-1">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Nom de la boutique</label>
+                                        <input
+                                            type="text"
+                                            value={shopName}
+                                            onChange={e => setShopName(e.target.value)}
+                                            className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">URL du logo</label>
+                                        <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                                            <span className="inline-flex items-center px-3 bg-gray-50 text-gray-500 text-sm border-r border-gray-300">
+                                                <Image size={16} />
+                                            </span>
+                                            <input
+                                                type="text"
+                                                value={logoUrl}
+                                                onChange={e => setLogoUrl(e.target.value)}
+                                                className="flex-1 min-w-0 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500 border-0"
+                                                placeholder="https://..."
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">URL du Logo</label>
-                                <div className="mt-1 flex rounded-md shadow-sm">
-                                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
-                                        <Image size={16} />
-                                    </span>
-                                    <input
-                                        type="text"
-                                        value={logoUrl}
-                                        onChange={e => setLogoUrl(e.target.value)}
-                                        className="focus:ring-brand-500 focus:border-brand-500 flex-1 block w-full rounded-none rounded-r-md sm:text-sm border-gray-300 py-2 px-3"
-                                        placeholder="https://..."
-                                    />
+                            </section>
+
+                            {/* Section: Paiement (Stripe) */}
+                            <section className="space-y-4">
+                                <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2 flex items-center gap-2">
+                                    <Shield size={18} className="text-gray-500" />
+                                    Paiement en ligne (Stripe)
+                                </h2>
+                                <div className="space-y-4 rounded-xl bg-gray-50/80 p-4 border border-gray-100">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Clé publique (publishable)</label>
+                                        <input
+                                            type="text"
+                                            value={stripePublishableKey}
+                                            onChange={e => setStripePublishableKey(e.target.value)}
+                                            className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm font-mono focus:ring-brand-500 focus:border-brand-500"
+                                            placeholder="pk_live_... ou pk_test_..."
+                                        />
+                                        <p className="mt-1 text-xs text-gray-500">Affichée côté client pour Stripe.js sur les landing pages.</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Clé secrète (secret)</label>
+                                        <input
+                                            type="password"
+                                            value={stripeSecretKey}
+                                            onChange={e => setStripeSecretKey(e.target.value)}
+                                            className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm font-mono focus:ring-brand-500 focus:border-brand-500"
+                                            placeholder="sk_live_... ou sk_test_..."
+                                        />
+                                        <p className="mt-1 text-xs text-gray-500">Ne partagez jamais cette clé. Utilisez sk_test_ en développement.</p>
+                                    </div>
                                 </div>
-                            </div>
+                            </section>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Clé API Gemini</label>
-                                <div className="mt-1 flex rounded-md shadow-sm">
-                                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
-                                        <Key size={16} />
-                                    </span>
-                                    <input
-                                        type="password"
-                                        value={geminiApiKey}
-                                        onChange={e => setGeminiApiKey(e.target.value)}
-                                        className="focus:ring-brand-500 focus:border-brand-500 flex-1 block w-full rounded-none rounded-r-md sm:text-sm border-gray-300 py-2 px-3"
-                                        placeholder="AIzaSy..."
-                                    />
+                            {/* Section: Clés API */}
+                            <section className="space-y-4">
+                                <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2 flex items-center gap-2">
+                                    <Key size={18} className="text-gray-500" />
+                                    Clés API
+                                </h2>
+                                <div className="space-y-5 rounded-xl bg-gray-50/80 p-4 border border-gray-100">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Clé API Gemini (Google)</label>
+                                        <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                                            <span className="inline-flex items-center px-3 bg-gray-50 text-gray-500 text-sm border-r border-gray-300">
+                                                <Key size={16} />
+                                            </span>
+                                            <input
+                                                type="password"
+                                                value={geminiApiKey}
+                                                onChange={e => setGeminiApiKey(e.target.value)}
+                                                className="flex-1 min-w-0 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500 border-0"
+                                                placeholder="AIzaSy..."
+                                            />
+                                        </div>
+                                        <p className="mt-1 text-xs text-gray-500">Nécessaire pour la génération automatique de descriptions produit.</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Clé API TextileLaunch</label>
+                                        <p className="text-xs text-gray-500 mb-2">
+                                            Pour appeler l’API (import produits, etc.) sans session. En-tête : <code className="bg-gray-200 px-1 rounded text-gray-700">Authorization: Bearer &lt;clé&gt;</code> ou <code className="bg-gray-200 px-1 rounded text-gray-700">X-API-Key: &lt;clé&gt;</code>.
+                                        </p>
+                                        {newApiKey ? (
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    readOnly
+                                                    value={newApiKey}
+                                                    className="flex-1 font-mono text-sm border border-amber-300 bg-amber-50 rounded-lg py-2 px-3"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        try {
+                                                            await navigator.clipboard.writeText(newApiKey);
+                                                            setApiKeyCopied(true);
+                                                            setTimeout(() => setApiKeyCopied(false), 2000);
+                                                        } catch {}
+                                                    }}
+                                                    className="flex items-center gap-1.5 px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium shrink-0"
+                                                >
+                                                    {apiKeyCopied ? <Check size={16} /> : <Copy size={16} />}
+                                                    {apiKeyCopied ? 'Copié' : 'Copier'}
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-wrap items-center gap-3">
+                                                <span className="text-sm text-gray-600">
+                                                    {settings.hasApiKey ? 'Clé configurée (••••••••)' : 'Aucune clé'}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        setApiKeyError('');
+                                                        setApiKeyGenerating(true);
+                                                        try {
+                                                            const res = await import('../src/utils/api').then(m => m.settingsAPI.generateApiKey());
+                                                            setNewApiKey(res.apiKey);
+                                                            await refreshSettings();
+                                                        } catch (e: any) {
+                                                            setApiKeyError(e?.message || 'Erreur lors de la génération.');
+                                                        } finally {
+                                                            setApiKeyGenerating(false);
+                                                        }
+                                                    }}
+                                                    disabled={apiKeyGenerating}
+                                                    className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50"
+                                                >
+                                                    {apiKeyGenerating ? 'Génération...' : 'Générer une clé'}
+                                                </button>
+                                            </div>
+                                        )}
+                                        {newApiKey && <p className="mt-2 text-xs text-amber-700">Copiez la clé maintenant. Elle ne sera plus affichée.</p>}
+                                        {apiKeyError && <p className="mt-2 text-xs text-red-600">{apiKeyError}</p>}
+                                    </div>
                                 </div>
-                                <p className="mt-2 text-xs text-gray-500">
-                                    Nécessaire pour la génération automatique de descriptions.
-                                </p>
-                            </div>
+                            </section>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Stripe – Clé publique (publishable)</label>
-                                <input
-                                    type="text"
-                                    value={stripePublishableKey}
-                                    onChange={e => setStripePublishableKey(e.target.value)}
-                                    className="focus:ring-brand-500 focus:border-brand-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 font-mono"
-                                    placeholder="pk_live_... ou pk_test_..."
-                                />
-                                <p className="mt-1 text-xs text-gray-500">Pour le paiement en ligne (Stripe) sur les fiches produit.</p>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Stripe – Clé secrète (secret)</label>
-                                <input
-                                    type="password"
-                                    value={stripeSecretKey}
-                                    onChange={e => setStripeSecretKey(e.target.value)}
-                                    className="focus:ring-brand-500 focus:border-brand-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 font-mono"
-                                    placeholder="sk_live_... ou sk_test_..."
-                                />
-                                <p className="mt-1 text-xs text-gray-500">Ne partagez jamais cette clé. Utilisez sk_test_ en développement.</p>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Code Facebook Pixel</label>
-                                <div className="mt-1">
-                                    <textarea
-                                        value={facebookPixelCode}
-                                        onChange={e => setFacebookPixelCode(e.target.value)}
-                                        rows={6}
-                                        className="focus:ring-brand-500 focus:border-brand-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 font-mono text-xs"
-                                        placeholder="<!-- Facebook Pixel Code -->
-<script>
-!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}(window, document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', 'YOUR_PIXEL_ID');
-fbq('track', 'PageView');
-</script>
-<noscript><img height='1' width='1' style='display:none'
-src='https://www.facebook.com/tr?id=YOUR_PIXEL_ID&ev=PageView&noscript=1'
-/></noscript>"
-                                    />
+                            {/* Section: Tracking (Pixels) */}
+                            <section className="space-y-4">
+                                <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2">
+                                    Tracking &amp; pixels
+                                </h2>
+                                <div className="space-y-4 rounded-xl bg-gray-50/80 p-4 border border-gray-100">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Code Facebook Pixel</label>
+                                        <textarea
+                                            value={facebookPixelCode}
+                                            onChange={e => setFacebookPixelCode(e.target.value)}
+                                            rows={5}
+                                            className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-xs font-mono focus:ring-brand-500 focus:border-brand-500"
+                                            placeholder="<!-- Facebook Pixel Code --> ..."
+                                        />
+                                        <p className="mt-1 text-xs text-gray-500">Injecté dans le &lt;head&gt; des landing pages.</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Code TikTok Pixel</label>
+                                        <textarea
+                                            value={tiktokPixelCode}
+                                            onChange={e => setTiktokPixelCode(e.target.value)}
+                                            rows={5}
+                                            className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-xs font-mono focus:ring-brand-500 focus:border-brand-500"
+                                            placeholder="Collez votre code TikTok Pixel (script + noscript)"
+                                        />
+                                        <p className="mt-1 text-xs text-gray-500">Injecté dans le &lt;head&gt; des landing pages.</p>
+                                    </div>
                                 </div>
-                                <p className="mt-2 text-xs text-gray-500">
-                                    Code Facebook Pixel à injecter dans le &lt;head&gt; des pages de landing page. Sera ajouté automatiquement.
-                                </p>
-                            </div>
+                            </section>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Code TikTok Pixel</label>
-                                <div className="mt-1">
-                                    <textarea
-                                        value={tiktokPixelCode}
-                                        onChange={e => setTiktokPixelCode(e.target.value)}
-                                        rows={6}
-                                        className="focus:ring-brand-500 focus:border-brand-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 font-mono text-xs"
-                                        placeholder={'Collez votre code TikTok Pixel (script + noscript) ici'}
-                                    />
+                            {/* Section: Intégrations */}
+                            <section className="space-y-4">
+                                <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2 flex items-center gap-2">
+                                    <ExternalLink size={18} className="text-gray-500" />
+                                    Intégrations
+                                </h2>
+                                <div className="rounded-xl bg-gray-50/80 p-4 border border-gray-100">
+                                    <Link
+                                        to="/integrations/affiliate"
+                                        className="inline-flex items-center gap-2 text-brand-600 hover:text-brand-700 text-sm font-medium"
+                                    >
+                                        <ExternalLink size={16} />
+                                        Connecter Azome Affiliate (ou autre plateforme)
+                                    </Link>
                                 </div>
-                                <p className="mt-2 text-xs text-gray-500">
-                                    Code TikTok Pixel à injecter dans le &lt;head&gt; des pages de landing page. Sera ajouté automatiquement.
-                                </p>
-                            </div>
+                            </section>
 
-                            <div className="pt-4 border-t border-gray-200 mt-6">
-                                <p className="text-sm text-gray-600 mb-2">Réseau d'affiliation</p>
-                                <Link
-                                    to="/integrations/affiliate"
-                                    className="inline-flex items-center text-brand-600 hover:text-brand-700 text-sm font-medium mb-4"
-                                >
-                                    <ExternalLink size={16} className="mr-1" />
-                                    Connecter Azome Affiliate (ou autre plateforme)
-                                </Link>
-                            </div>
-                            <div className="pt-4">
+                            {/* Save */}
+                            <section className="pt-4 border-t border-gray-200 flex flex-wrap items-center gap-3">
                                 <button
                                     type="submit"
-                                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-600 hover:bg-brand-700 focus:outline-none"
+                                    className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded-lg text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
                                 >
-                                    <Save className="mr-2 h-4 w-4" />
+                                    <Save size={18} />
                                     Sauvegarder les paramètres
                                 </button>
                                 {saveMessage && (
-                                    <span className="ml-4 text-green-600 text-sm font-medium animate-fade-in">
+                                    <span className="text-sm font-medium text-green-600">
                                         {saveMessage}
                                     </span>
                                 )}
-                            </div>
+                            </section>
                         </form>
                     )}
 
                     {activeTab === 'users' && user?.role === 'admin' && (
-                        <div>
-                            <div className="flex justify-between mb-4">
-                                <h3 className="text-lg font-medium text-gray-900">Gestion des utilisateurs</h3>
-                                <button
-                                    onClick={() => { setEditingUser(null); setUserForm({name:'', email:'', password:'', role:'user'}); setIsUserModalOpen(true); }}
-                                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-brand-600 hover:bg-brand-700"
-                                >
-                                    <Plus className="mr-1 h-3 w-3" /> Ajouter
-                                </button>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rôle</th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {users.map((u) => (
-                                            <tr key={u.id}>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{u.name}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{u.email}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
-                                                        {u.role === 'admin' ? 'Admin' : 'Vendeur'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                    <button onClick={() => openEditUser(u)} className="text-brand-600 hover:text-brand-900 mr-4">Éditer</button>
-                                                    {u.id !== user.id && (
-                                                        <button onClick={() => handleDeleteUser(u.id)} className="text-red-600 hover:text-red-900">
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    )}
-                                                </td>
+                        <div className="space-y-6">
+                            <section>
+                                <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                                    <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Gestion des utilisateurs</h2>
+                                    <button
+                                        onClick={() => { setEditingUser(null); setUserForm({ name: '', email: '', password: '', role: 'user' }); setIsUserModalOpen(true); }}
+                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-brand-600 hover:bg-brand-700"
+                                    >
+                                        <Plus size={16} />
+                                        Ajouter un utilisateur
+                                    </button>
+                                </div>
+                                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
+                                                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rôle</th>
+                                                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {users.map((u) => (
+                                                <tr key={u.id} className="hover:bg-gray-50/50">
+                                                    <td className="px-5 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{u.name}</td>
+                                                    <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">{u.email}</td>
+                                                    <td className="px-5 py-4 whitespace-nowrap">
+                                                        <span className={`inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
+                                                            {u.role === 'admin' ? 'Admin' : 'Vendeur'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                                                        <button type="button" onClick={() => openEditUser(u)} className="text-brand-600 hover:text-brand-800">Éditer</button>
+                                                        {u.id !== user.id && (
+                                                            <button type="button" onClick={() => handleDeleteUser(u.id)} className="text-red-600 hover:text-red-800 inline-flex items-center">
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
                         </div>
                     )}
                 </div>
@@ -320,32 +402,34 @@ src='https://www.facebook.com/tr?id=YOUR_PIXEL_ID&ev=PageView&noscript=1'
 
             {/* User Modal */}
             {isUserModalOpen && (
-                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-                        <h3 className="text-lg font-medium text-gray-900 mb-4">{editingUser ? 'Modifier Utilisateur' : 'Nouvel Utilisateur'}</h3>
-                        <form onSubmit={handleUserSubmit} className="space-y-4">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-200">
+                            <h3 className="text-lg font-semibold text-gray-900">{editingUser ? 'Modifier l’utilisateur' : 'Nouvel utilisateur'}</h3>
+                        </div>
+                        <form onSubmit={handleUserSubmit} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Nom</label>
-                                <input type="text" required value={userForm.name} onChange={e => setUserForm({...userForm, name: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-brand-500 focus:border-brand-500 sm:text-sm" />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+                                <input type="text" required value={userForm.name} onChange={e => setUserForm({ ...userForm, name: e.target.value })} className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Email</label>
-                                <input type="email" required value={userForm.email} onChange={e => setUserForm({...userForm, email: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-brand-500 focus:border-brand-500 sm:text-sm" />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input type="email" required value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Mot de passe</label>
-                                <input type="text" required={!editingUser} value={userForm.password} onChange={e => setUserForm({...userForm, password: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-brand-500 focus:border-brand-500 sm:text-sm" placeholder={editingUser ? "Laisser vide pour ne pas changer" : ""} />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+                                <input type="password" required={!editingUser} value={userForm.password} onChange={e => setUserForm({ ...userForm, password: e.target.value })} className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500" placeholder={editingUser ? 'Laisser vide pour ne pas changer' : ''} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Rôle</label>
-                                <select value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value as any})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Rôle</label>
+                                <select value={userForm.role} onChange={e => setUserForm({ ...userForm, role: e.target.value as 'admin' | 'user' })} className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500">
                                     <option value="user">Vendeur</option>
                                     <option value="admin">Administrateur</option>
                                 </select>
                             </div>
-                            <div className="flex justify-end pt-4">
-                                <button type="button" onClick={() => setIsUserModalOpen(false)} className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 mr-3">Annuler</button>
-                                <button type="submit" className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-600 hover:bg-brand-700">Sauvegarder</button>
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button type="button" onClick={() => setIsUserModalOpen(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200">Annuler</button>
+                                <button type="submit" className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-brand-600 hover:bg-brand-700">Sauvegarder</button>
                             </div>
                         </form>
                     </div>

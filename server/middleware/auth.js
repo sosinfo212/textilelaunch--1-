@@ -1,8 +1,14 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { db } from '../index.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'textilelaunch-secret-key-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const API_KEY_PREFIX = 'tl_';
+
+function hashApiKey(key) {
+  return crypto.createHash('sha256').update(key, 'utf8').digest('hex');
+}
 
 /**
  * Generate JWT token for user
@@ -30,6 +36,30 @@ export const authenticate = async (req, res, next) => {
   try {
     let token = null;
     let sessionId = null;
+
+    // 1) API key (Bearer tl_xxx or X-API-Key: tl_xxx)
+    const authHeader = req.headers.authorization;
+    const apiKeyHeader = req.headers['x-api-key'];
+    const rawKey = (authHeader && authHeader.startsWith('Bearer ') && authHeader.slice(7).trim()) || (apiKeyHeader && apiKeyHeader.trim()) || null;
+    if (rawKey && rawKey.startsWith(API_KEY_PREFIX)) {
+      try {
+        const apiKeyHash = hashApiKey(rawKey);
+        const [rows] = await db.execute(
+          'SELECT user_id FROM app_settings WHERE api_key_hash = ? LIMIT 1',
+          [apiKeyHash]
+        );
+        if (rows.length > 0) {
+          req.userId = rows[0].user_id;
+          const [users] = await db.execute('SELECT id, email, name, role FROM users WHERE id = ?', [req.userId]);
+          if (users.length > 0) {
+            req.user = users[0];
+            return next();
+          }
+        }
+      } catch (e) {
+        if (e.code !== 'ER_BAD_FIELD_ERROR') throw e;
+      }
+    }
 
     // Debug: log cookies and session check (always log for debugging)
     console.log(`[AUTH] ${req.method} ${req.path}`);

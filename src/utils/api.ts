@@ -276,6 +276,13 @@ export const settingsAPI = {
       body: JSON.stringify(settings),
     });
   },
+  
+  /** Generate a new API key. Returns the key once; store it securely. */
+  generateApiKey: async () => {
+    return apiRequest<{ apiKey: string; message: string }>('/settings/generate-api-key', {
+      method: 'POST',
+    });
+  },
 };
 
 // Analytics API (public endpoints - use fetch with credentials: 'omit' for visitors)

@@ -14,9 +14,16 @@ Bulk import products via the REST API. Use this to create many products in one r
 
 ## Authentication
 
-You must be logged in. The API uses the same session cookie as the dashboard. The imported products are created for the **currently authenticated user** (`owner_id`).
+You can authenticate in either way:
 
-- **401 Unauthorized** — Not logged in or session invalid.
+1. **Session cookie** — Log in via the dashboard; the same cookie is sent with requests (e.g. from the browser).
+2. **API key** — Generate a key in **Settings → Clé API TextileLaunch → Générer une clé**. Use it in the request header:
+   - `Authorization: Bearer <your_api_key>`, or
+   - `X-API-Key: <your_api_key>`
+
+The imported products are created for the **authenticated user** (`owner_id`).
+
+- **401 Unauthorized** — Not logged in, invalid session, or invalid/missing API key.
 
 ---
 
