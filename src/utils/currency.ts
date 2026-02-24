@@ -8,14 +8,19 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   EUR: '€',
   USD: '$',
   DH: 'درهم',
+  GBP: '£',
+  CAD: 'CA$',
 };
 
-export const CURRENCY_NAMES: Record<string, string> = {
-  MAD: 'MAD',
-  EUR: 'EUR',
-  USD: 'USD',
-  DH: 'DH',
-};
+/** Options for product currency selector (code + label for dropdown) */
+export const PRODUCT_CURRENCIES: { value: string; label: string }[] = [
+  { value: 'MAD', label: 'MAD (درهم)' },
+  { value: 'DH', label: 'DH (درهم)' },
+  { value: 'EUR', label: 'EUR (€)' },
+  { value: 'USD', label: 'USD ($)' },
+  { value: 'GBP', label: 'GBP (£)' },
+  { value: 'CAD', label: 'CAD (CA$)' },
+];
 
 /**
  * Format price with currency
@@ -31,8 +36,7 @@ export const formatPrice = (price: number, currency: string = 'MAD'): string => 
   if (currency === 'MAD' || currency === 'DH') {
     return `${formattedPrice} ${symbol}`;
   }
-  
-  // For LTR currencies (EUR, USD), put symbol before
+  // For LTR currencies (EUR, USD, GBP, CAD, etc.), put symbol before
   return `${symbol}${formattedPrice}`;
 };
 

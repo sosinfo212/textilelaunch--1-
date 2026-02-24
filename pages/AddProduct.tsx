@@ -4,6 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { Product, ProductAttribute } from '../types';
 import { generateProductDescription } from '../services/geminiService';
 import { fileToBase64, convertImagesToBase64, isVideo, isImage } from '../src/utils/imageUtils';
+import { PRODUCT_CURRENCIES } from '../src/utils/currency';
 import { Sparkles, Plus, Trash2, Image as ImageIcon, Loader2, Edit2, X, Eye, EyeOff, Video } from 'lucide-react';
 
 export const AddProduct: React.FC = () => {
@@ -245,7 +246,11 @@ export const AddProduct: React.FC = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-gray-700">Prix &amp; devise</p>
+            <p className="text-xs text-gray-500">Choisissez la devise du produit pour les prix sur la landing page.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
              <div>
                 <label className="block text-sm font-medium text-gray-700">Prix de vente</label>
                 <input
@@ -255,11 +260,11 @@ export const AddProduct: React.FC = () => {
                 value={price}
                 onChange={e => setPrice(e.target.value)}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm"
-                placeholder="29.99"
+                placeholder="Ex: 29.99"
                 />
              </div>
              <div>
-                <label className="block text-sm font-medium text-gray-500">Prix régulier (Optionnel)</label>
+                <label className="block text-sm font-medium text-gray-500">Prix régulier (optionnel)</label>
                 <input
                 type="number"
                 step="0.01"
@@ -269,23 +274,18 @@ export const AddProduct: React.FC = () => {
                 placeholder="Ex: 45.00 (Prix barré)"
                 />
              </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Devise</label>
-            <select
-              value={currency}
-              onChange={e => setCurrency(e.target.value)}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm"
-            >
-              <option value="MAD">MAD (درهم)</option>
-              <option value="EUR">EUR (€)</option>
-              <option value="USD">USD ($)</option>
-              <option value="DH">DH (درهم)</option>
-            </select>
-            <p className="mt-1 text-xs text-gray-500">
-              La devise sera affichée sur la page de destination du produit.
-            </p>
+             <div>
+                <label className="block text-sm font-medium text-gray-700">Devise</label>
+                <select
+                  value={currency}
+                  onChange={e => setCurrency(e.target.value)}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm"
+                >
+                  {PRODUCT_CURRENCIES.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+             </div>
           </div>
 
           <div>
