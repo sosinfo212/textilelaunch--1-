@@ -896,6 +896,30 @@ export const ProductLanding: React.FC = () => {
             )}
         </div>
 
+        {/* Reviews Section - only if enabled and has reviews */}
+        {product.showReviews !== false && product.reviews && product.reviews.length > 0 && (
+            <div className="mt-12 bg-white p-6 sm:p-8 rounded-xl border border-gray-100 shadow-sm">
+                <h3 className="text-2xl font-bold mb-6 text-gray-800 border-b border-gray-200 pb-4">
+                    التقييمات
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {product.reviews.map((r, idx) => (
+                        <div key={idx} className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="font-bold text-gray-800">{r.author}</span>
+                                <span className="text-amber-500 flex items-center gap-0.5">
+                                    {[1, 2, 3, 4, 5].map((n) => (
+                                        <Star key={n} size={14} className={n <= (r.rating || 0) ? 'fill-amber-500 text-amber-500' : 'text-gray-200'} />
+                                    ))}
+                                </span>
+                            </div>
+                            <p className="text-gray-600 text-sm leading-relaxed">{r.text}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )}
+
       </main>
 
       {/* Sticky Mobile CTA - Now visible on all devices */}
