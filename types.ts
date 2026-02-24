@@ -4,6 +4,12 @@ export interface ProductAttribute {
   options: string[]; // e.g., ["S", "M", "L"]
 }
 
+export interface ProductReview {
+  author: string;
+  rating: number; // 1-5
+  text: string;
+}
+
 export interface Product {
   id: string;
   ownerId: string; // NEW: Link to specific seller
@@ -22,6 +28,8 @@ export interface Product {
   createdAt: number;
   landingPageTemplateId?: string; // Link to a custom design
   paymentOptions?: 'cod_only' | 'stripe_only' | 'both'; // How customer can pay
+  reviews?: ProductReview[];
+  showReviews?: boolean; // Show reviews section on landing page
 }
 
 export interface CustomerInfo {
@@ -68,7 +76,8 @@ export type ElementType =
   | 'button'
   | 'html-block'
   | 'trust-badges'
-  | 'feature-item'; // New type for small grid items
+  | 'feature-item'
+  | 'product-reviews';
 
 export interface ElementStyle {
   textAlign?: 'left' | 'center' | 'right';

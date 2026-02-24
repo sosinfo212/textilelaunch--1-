@@ -234,6 +234,9 @@ function createDefaultElement(type: PageElement['type']): PageElement {
     'product-gallery': {
       style: { width: '100%', padding: '0.5rem' },
     },
+    'product-reviews': {
+      style: { padding: '1rem', backgroundColor: '#fffbeb', borderRadius: '0.5rem', border: '1px dashed #d97706' },
+    },
     'order-form': {
       style: { padding: '1.5rem', backgroundColor: '#f9fafb', borderRadius: '0.5rem' },
     },

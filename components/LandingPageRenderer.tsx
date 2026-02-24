@@ -215,6 +215,32 @@ export const LandingPageRenderer: React.FC<RendererProps> = ({
                             );
                         })()}
 
+                        {el.type === 'product-reviews' && (() => {
+                            const reviewsList = product.reviews && Array.isArray(product.reviews) ? product.reviews : [];
+                            const show = product.showReviews !== false && reviewsList.length > 0;
+                            if (!show) return null;
+                            return (
+                                <div className="w-full mt-6" dir="rtl">
+                                    <h3 className="text-2xl font-bold mb-6 text-gray-800 border-b border-gray-200 pb-4">التقييمات</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {reviewsList.map((r: { author?: string; rating?: number; text?: string }, idx: number) => (
+                                            <div key={idx} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="font-bold text-gray-800">{r.author || ''}</span>
+                                                    <span className="text-amber-500 text-sm flex items-center gap-0.5">
+                                                        {[1, 2, 3, 4, 5].map((n) => (
+                                                            <Star key={n} size={14} className={n <= (r.rating || 0) ? 'fill-amber-500 text-amber-500' : 'text-gray-200'} />
+                                                        ))}
+                                                    </span>
+                                                </div>
+                                                <p className="text-gray-600 text-sm leading-relaxed">{r.text || ''}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
                         {el.type === 'trust-badges' && (
                             <div className="grid grid-cols-2 gap-4 w-full">
                                 <div className="flex flex-col items-center text-center bg-gray-50 p-3 rounded-xl border border-gray-100">
@@ -433,6 +459,27 @@ const CustomCodeRenderer: React.FC<{ htmlCode: string; product: Product; formSta
     `;
 
     processedHtml = processedHtml.replace(/{product_image_carousel}/g, galleryHtml);
+
+    // product_reviews: section with reviews (only if showReviews && reviews.length)
+    const reviewsList = (product as any).reviews && Array.isArray((product as any).reviews) ? (product as any).reviews : [];
+    const showReviewsSection = (product as any).showReviews !== false && reviewsList.length > 0;
+    const reviewsSectionHtml = showReviewsSection
+      ? (() => {
+          const escapeHtml = (s: string) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+          const stars = (rating: number) => '★'.repeat(Math.min(5, Math.max(0, rating))) + '☆'.repeat(5 - Math.min(5, Math.max(0, rating)));
+          const cards = reviewsList.map((r: { author?: string; rating?: number; text?: string }) => `
+            <div class="tl-review-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="font-bold text-gray-800">${escapeHtml(r.author || '')}</span>
+                <span class="text-amber-500 text-sm" aria-label="${(r.rating || 0)} étoiles">${stars(r.rating || 5)}</span>
+              </div>
+              <p class="text-gray-600 text-sm leading-relaxed">${escapeHtml(r.text || '')}</p>
+            </div>
+          `).join('');
+          return `<div class="tl-product-reviews mt-12" dir="rtl"><h3 class="text-2xl font-bold mb-6 text-gray-800 border-b border-gray-200 pb-4">التقييمات</h3><div class="grid grid-cols-1 sm:grid-cols-2 gap-4">${cards}</div></div>`;
+        })()
+      : '';
+    processedHtml = processedHtml.replace(/{product_reviews}/g, reviewsSectionHtml);
 
     // 2. Generate Attribute HTML
     const attributesHtml = product.attributes.map(attr => `

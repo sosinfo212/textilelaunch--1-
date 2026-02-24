@@ -158,14 +158,15 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         sku: product.sku,
         showSku: product.showSku || false,
         images: product.images || [],
-        videos: product.videos || [], // Always include videos array
+        videos: product.videos || [],
         attributes: product.attributes || [],
         category: product.category,
         supplier: product.supplier,
-        landingPageTemplateId: product.landingPageTemplateId
+        landingPageTemplateId: product.landingPageTemplateId,
+        paymentOptions: product.paymentOptions || 'cod_only',
+        reviews: product.reviews || [],
+        showReviews: product.showReviews !== false
       };
-      
-      // Only include optional fields if they have values
       if (product.regularPrice) productData.regularPrice = product.regularPrice;
       if (product.category) productData.category = product.category;
       if (product.supplier) productData.supplier = product.supplier;
@@ -198,15 +199,16 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         sku: product.sku,
         showSku: product.showSku || false,
         images: product.images || [],
-        videos: product.videos || [], // Always include videos array
+        videos: product.videos || [],
         attributes: product.attributes || [],
         category: product.category,
         supplier: product.supplier,
-landingPageTemplateId: product.landingPageTemplateId,
-        paymentOptions: product.paymentOptions || 'cod_only'
+        landingPageTemplateId: product.landingPageTemplateId,
+        paymentOptions: product.paymentOptions || 'cod_only',
+        reviews: product.reviews || [],
+        showReviews: product.showReviews !== false
       };
 
-      // Only include optional fields if they have values
       if (product.regularPrice) productData.regularPrice = product.regularPrice;
       if (product.category) productData.category = product.category;
       if (product.supplier) productData.supplier = product.supplier;

@@ -134,6 +134,14 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element }) => 
         </div>
       );
 
+    case 'product-reviews':
+      return (
+        <div style={style} className="border border-dashed border-gray-300 rounded-lg p-4 bg-amber-50/50">
+          <p className="text-sm font-medium text-gray-700">Avis clients</p>
+          <p className="text-xs text-gray-500 mt-1">Remplacé par {'{product_reviews}'} sur la landing page</p>
+        </div>
+      );
+
     case 'order-form':
       return (
         <div style={style} className="border rounded-lg p-4">

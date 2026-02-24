@@ -20,6 +20,7 @@ Use these shortcodes in **Code** templates (Modèle de landing page → mode Cod
 | `{trust_badges}` | Two trust badges (fast delivery, pay on delivery). |
 | `{product_description}` | Raw description (HTML or plain text). |
 | `{product_description_section}` | Section with “وصف المنتج” title + description. |
+| `{product_reviews}` | Avis clients (auteur, note, texte). Affiché si « Afficher la section avis » est activé et au moins un avis. |
 | `{sticky_cta}` or `{sticky_cta\|Order Now}` | Fixed bottom bar: total + button. Custom: `{sticky_cta|Order Now}` |
 
 ## Example: custom layout

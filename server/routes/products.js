@@ -211,7 +211,9 @@ router.post('/', authenticate, async (req, res) => {
       category,
       supplier,
       landingPageTemplateId,
-      paymentOptions
+      paymentOptions,
+      reviews,
+      showReviews
     } = req.body;
 
     if (!name || price === undefined || price === null) {
@@ -223,7 +225,8 @@ router.post('/', authenticate, async (req, res) => {
     const imagesJson = JSON.stringify(images || []);
     const videosJson = JSON.stringify(videos || []);
     const attributesJson = JSON.stringify(attributes || []);
-    
+    const reviewsJson = JSON.stringify(Array.isArray(reviews) ? reviews : []);
+
     // Ensure price is a number
     const priceNum = typeof price === 'string' ? parseFloat(price) : price;
     const regularPriceNum = regularPrice ? (typeof regularPrice === 'string' ? parseFloat(regularPrice) : regularPrice) : null;
@@ -233,18 +236,36 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const payOpts = ['cod_only', 'stripe_only', 'both'].includes(paymentOptions) ? paymentOptions : 'cod_only';
-    await db.execute(
-      `INSERT INTO products (
-        id, owner_id, name, description, price, regular_price, currency, sku, show_sku,
-        images, videos, attributes, category, supplier, landing_page_template_id, payment_options
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id, userId, name, description || '', priceNum, regularPriceNum, currency || 'MAD',
-        sku || null, showSku ? 1 : 0,
-        imagesJson, videosJson, attributesJson, category || null, supplier || null,
-        landingPageTemplateId || null, payOpts
-      ]
-    );
+    const showReviewsVal = showReviews === false ? 0 : 1;
+    try {
+      await db.execute(
+        `INSERT INTO products (
+          id, owner_id, name, description, price, regular_price, currency, sku, show_sku,
+          images, videos, attributes, category, supplier, landing_page_template_id, payment_options, reviews, show_reviews
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id, userId, name, description || '', priceNum, regularPriceNum, currency || 'MAD',
+          sku || null, showSku ? 1 : 0,
+          imagesJson, videosJson, attributesJson, category || null, supplier || null,
+          landingPageTemplateId || null, payOpts, reviewsJson, showReviewsVal
+        ]
+      );
+    } catch (err) {
+      if (err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('reviews')) {
+        await db.execute(
+          `INSERT INTO products (
+            id, owner_id, name, description, price, regular_price, currency, sku, show_sku,
+            images, videos, attributes, category, supplier, landing_page_template_id, payment_options
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            id, userId, name, description || '', priceNum, regularPriceNum, currency || 'MAD',
+            sku || null, showSku ? 1 : 0,
+            imagesJson, videosJson, attributesJson, category || null, supplier || null,
+            landingPageTemplateId || null, payOpts
+          ]
+        );
+      } else throw err;
+    }
 
     const [products] = await db.execute(
       'SELECT * FROM products WHERE id = ?',
@@ -297,34 +318,59 @@ router.put('/:id', authenticate, async (req, res) => {
       category,
       supplier,
       landingPageTemplateId,
-      paymentOptions
+      paymentOptions,
+      reviews,
+      showReviews
     } = req.body;
 
     const imagesJson = JSON.stringify(images || []);
     const videosJson = JSON.stringify(videos || []);
     const attributesJson = JSON.stringify(attributes || []);
+    const reviewsJson = JSON.stringify(Array.isArray(reviews) ? reviews : []);
     const payOpts = ['cod_only', 'stripe_only', 'both'].includes(paymentOptions) ? paymentOptions : undefined;
 
     const updates = [
       'name = ?', 'description = ?', 'price = ?', 'regular_price = ?', 'currency = ?', 'sku = ?', 'show_sku = ?',
       'images = ?', 'videos = ?', 'attributes = ?', 'category = ?', 'supplier = ?',
-      'landing_page_template_id = ?'
+      'landing_page_template_id = ?', 'reviews = ?', 'show_reviews = ?'
     ];
     const values = [
       name, description || '', price, regularPrice || null, currency || 'MAD',
       sku || null, showSku ? 1 : 0,
       imagesJson, videosJson, attributesJson, category || null, supplier || null,
-      landingPageTemplateId || null
+      landingPageTemplateId || null, reviewsJson, showReviews === false ? 0 : 1
     ];
     if (payOpts) {
       updates.push('payment_options = ?');
       values.push(payOpts);
     }
     values.push(id);
-    await db.execute(
-      `UPDATE products SET ${updates.join(', ')} WHERE id = ?`,
-      values
-    );
+    try {
+      await db.execute(
+        `UPDATE products SET ${updates.join(', ')} WHERE id = ?`,
+        values
+      );
+    } catch (err) {
+      if (err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('reviews')) {
+        const updatesBase = [
+          'name = ?', 'description = ?', 'price = ?', 'regular_price = ?', 'currency = ?', 'sku = ?', 'show_sku = ?',
+          'images = ?', 'videos = ?', 'attributes = ?', 'category = ?', 'supplier = ?',
+          'landing_page_template_id = ?'
+        ];
+        const valuesBase = [
+          name, description || '', price, regularPrice || null, currency || 'MAD',
+          sku || null, showSku ? 1 : 0,
+          imagesJson, videosJson, attributesJson, category || null, supplier || null,
+          landingPageTemplateId || null
+        ];
+        if (payOpts) {
+          updatesBase.push('payment_options = ?');
+          valuesBase.push(payOpts);
+        }
+        valuesBase.push(id);
+        await db.execute(`UPDATE products SET ${updatesBase.join(', ')} WHERE id = ?`, valuesBase);
+      } else throw err;
+    }
 
     const [products] = await db.execute(
       'SELECT * FROM products WHERE id = ?',
@@ -651,7 +697,18 @@ function formatProduct(row) {
     console.error('Error parsing attributes:', e, row.attributes);
     attributes = [];
   }
-  
+
+  let reviews = [];
+  try {
+    if (row.reviews != null) {
+      if (typeof row.reviews === 'string') reviews = JSON.parse(row.reviews || '[]');
+      else if (Array.isArray(row.reviews)) reviews = row.reviews;
+    }
+  } catch (e) {
+    reviews = [];
+  }
+  const showReviews = row.show_reviews === 1 || row.show_reviews === true;
+
   return {
     id: row.id,
     ownerId: row.owner_id,
@@ -669,6 +726,8 @@ function formatProduct(row) {
     supplier: row.supplier || undefined,
     landingPageTemplateId: row.landing_page_template_id || undefined,
     paymentOptions: row.payment_options || 'cod_only',
+    reviews: reviews.length > 0 ? reviews : undefined,
+    showReviews: row.show_reviews !== undefined ? showReviews : true,
     createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now()
   };
 }

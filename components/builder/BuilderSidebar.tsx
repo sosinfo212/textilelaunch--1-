@@ -14,6 +14,7 @@ import {
   Code,
   Layout,
   Container,
+  MessageSquare,
 } from 'lucide-react';
 import { ElementType } from '../../types';
 
@@ -51,6 +52,7 @@ const COMPONENT_LIBRARY: Array<{
   { type: 'product-price', label: 'Prix', icon: <Box size={18} />, category: 'product' },
   { type: 'product-description', label: 'Description', icon: <Box size={18} />, category: 'product' },
   { type: 'product-gallery', label: 'Galerie', icon: <ImageIcon size={18} />, category: 'product' },
+  { type: 'product-reviews', label: 'Avis clients', icon: <MessageSquare size={18} />, category: 'product' },
 ];
 
 /**

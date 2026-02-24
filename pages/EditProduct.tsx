@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
-import { Product, ProductAttribute } from '../types';
+import { Product, ProductAttribute, ProductReview } from '../types';
 import { generateProductDescription } from '../services/geminiService';
 import { fileToBase64, convertImagesToBase64, isVideo, isImage } from '../src/utils/imageUtils';
 import { PRODUCT_CURRENCIES } from '../src/utils/currency';
-import { Sparkles, Plus, Trash2, Image as ImageIcon, Loader2, Edit2, X, Eye, EyeOff, Video } from 'lucide-react';
+import { Sparkles, Plus, Trash2, Image as ImageIcon, Loader2, Edit2, X, Eye, EyeOff, Video, Star, MessageSquare } from 'lucide-react';
 
 export const EditProduct: React.FC = () => {
   const navigate = useNavigate();
@@ -29,8 +29,10 @@ export const EditProduct: React.FC = () => {
   const [attributes, setAttributes] = useState<ProductAttribute[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [paymentOptions, setPaymentOptions] = useState<'cod_only' | 'stripe_only' | 'both'>('cod_only');
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [showReviews, setShowReviews] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
-  
+
   // UI State
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
@@ -59,6 +61,8 @@ export const EditProduct: React.FC = () => {
         setAttributes(Array.isArray(p.attributes) ? p.attributes : []);
         setSelectedTemplateId(p.landingPageTemplateId || '');
         setPaymentOptions(['cod_only', 'stripe_only', 'both'].includes((p as any).paymentOptions) ? (p as any).paymentOptions : 'cod_only');
+        setReviews(Array.isArray(p.reviews) ? p.reviews : []);
+        setShowReviews(p.showReviews !== false);
       } else {
         alert("Produit introuvable");
         navigate('/');
@@ -186,7 +190,9 @@ export const EditProduct: React.FC = () => {
       videos: videos.length > 0 ? videos : undefined,
       attributes: finalAttributes,
       landingPageTemplateId: selectedTemplateId || undefined,
-      paymentOptions
+      paymentOptions,
+      reviews,
+      showReviews
     };
     try {
       await updateProduct(updatedProduct);
@@ -410,6 +416,85 @@ export const EditProduct: React.FC = () => {
               <option value="stripe_only">Stripe uniquement (paiement en ligne)</option>
               <option value="both">Les deux (le client choisit)</option>
             </select>
+          </div>
+
+          {/* Reviews */}
+          <div className="border-t border-gray-200 pt-6">
+            <div className="flex items-center gap-2 mb-2">
+              <MessageSquare size={20} className="text-gray-500" />
+              <label className="block text-sm font-medium text-gray-700">Avis clients</label>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">Les avis s’affichent sur la landing page du produit. Utilisez le shortcode <code className="bg-gray-100 px-1 rounded">{'{product_reviews}'}</code> dans un modèle Code.</p>
+            <label className="inline-flex items-center gap-2 mb-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showReviews}
+                onChange={e => setShowReviews(e.target.checked)}
+                className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+              />
+              <span className="text-sm text-gray-700">Afficher la section avis sur la landing page</span>
+            </label>
+            <div className="space-y-3 mt-3">
+              {reviews.map((rev, idx) => (
+                <div key={idx} className="flex gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      value={rev.author}
+                      onChange={e => {
+                        const next = [...reviews];
+                        next[idx] = { ...next[idx], author: e.target.value };
+                        setReviews(next);
+                      }}
+                      placeholder="Nom"
+                      className="block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-2 text-sm"
+                    />
+                    <select
+                      value={rev.rating}
+                      onChange={e => {
+                        const next = [...reviews];
+                        next[idx] = { ...next[idx], rating: parseInt(e.target.value, 10) };
+                        setReviews(next);
+                      }}
+                      className="block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-2 text-sm"
+                    >
+                      {[1, 2, 3, 4, 5].map(n => (
+                        <option key={n} value={n}>{n} étoile{n > 1 ? 's' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex-1 flex gap-2">
+                    <textarea
+                      value={rev.text}
+                      onChange={e => {
+                        const next = [...reviews];
+                        next[idx] = { ...next[idx], text: e.target.value };
+                        setReviews(next);
+                      }}
+                      placeholder="Avis..."
+                      rows={2}
+                      className="block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-2 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setReviews(reviews.filter((_, i) => i !== idx))}
+                      className="flex-shrink-0 p-2 text-red-600 hover:bg-red-50 rounded-md"
+                      title="Supprimer"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setReviews([...reviews, { author: '', rating: 5, text: '' }])}
+                className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <Plus size={16} />
+                Ajouter un avis
+              </button>
+            </div>
           </div>
 
           {/* Image Upload */}
