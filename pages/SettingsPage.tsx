@@ -120,6 +120,9 @@ export const SettingsPage: React.FC = () => {
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
                 <p className="mt-1 text-sm text-gray-500">Boutique, paiement, API et tracking.</p>
+                <p className="mt-2 text-xs text-gray-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                    Ces paramètres sont <strong>propres à votre compte</strong>. Vos pages produit utiliseront votre Facebook Pixel, TikTok Pixel, clés Stripe et clés API.
+                </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-6">
@@ -192,6 +195,7 @@ export const SettingsPage: React.FC = () => {
                                         <CreditCard size={20} className="text-gray-500" />
                                         Paiement en ligne (Stripe)
                                     </h2>
+                                    <p className="text-sm text-gray-600">Vos clés Stripe sont utilisées sur les landing pages de vos produits pour le paiement en ligne.</p>
                                 <div className="space-y-4 rounded-xl bg-gray-50/80 p-4 border border-gray-100">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Clé publique (publishable)</label>
@@ -231,6 +235,7 @@ export const SettingsPage: React.FC = () => {
                                         <Key size={20} className="text-gray-500" />
                                         Clés API
                                     </h2>
+                                    <p className="text-sm text-gray-600">Votre clé Gemini (descriptions) et votre clé API TextileLaunch (import, etc.) sont propres à votre compte.</p>
                                 <div className="space-y-5 rounded-xl bg-gray-50/80 p-4 border border-gray-100">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Clé API Gemini (Google)</label>
@@ -431,6 +436,7 @@ export const SettingsPage: React.FC = () => {
                                         <Activity size={20} className="text-gray-500" />
                                         Tracking &amp; pixels
                                     </h2>
+                                    <p className="text-sm text-gray-600">Vos pixels Facebook et TikTok sont injectés sur les landing pages de vos produits.</p>
                                 <div className="space-y-4 rounded-xl bg-gray-50/80 p-4 border border-gray-100">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Code Facebook Pixel</label>
