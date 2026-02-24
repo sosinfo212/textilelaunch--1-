@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image, ExternalLink, Copy, Check, Eye, RefreshCw } from 'lucide-react';
+import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image, ExternalLink, Copy, Check, Eye, RefreshCw, Store, CreditCard, Activity, Link2 } from 'lucide-react';
 import { User as UserType } from '../types';
 import { getApiDocsUrl } from '../src/utils/api';
 
 export const SettingsPage: React.FC = () => {
     const { settings, updateSettings, refreshSettings } = useStore();
     const { user, users, addUser, updateUser, deleteUser } = useAuth();
-    const [activeTab, setActiveTab] = useState<'general' | 'users'>('general');
+    type SettingsSection = 'boutique' | 'paiement' | 'tracking' | 'api' | 'integrations' | 'users';
+    const [activeSection, setActiveSection] = useState<SettingsSection>('boutique');
 
     // API key (shown once after generate; view modal for stored key)
     const [newApiKey, setNewApiKey] = useState<string | null>(null);
@@ -105,76 +106,92 @@ export const SettingsPage: React.FC = () => {
         }
     };
 
+    const sidebarSections: { id: SettingsSection; label: string; icon: React.ReactNode }[] = [
+        { id: 'boutique', label: 'Boutique', icon: <Store size={18} /> },
+        { id: 'paiement', label: 'Paiement', icon: <CreditCard size={18} /> },
+        { id: 'tracking', label: 'Tracking', icon: <Activity size={18} /> },
+        { id: 'api', label: 'Clés API', icon: <Key size={18} /> },
+        { id: 'integrations', label: 'Intégrations', icon: <Link2 size={18} /> },
+        ...(user?.role === 'admin' ? [{ id: 'users' as const, label: 'Utilisateurs', icon: <User size={18} /> }] : []),
+    ];
+
     return (
-        <div className="max-w-4xl mx-auto">
-            <div className="mb-8">
+        <div className="max-w-5xl mx-auto">
+            <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
                 <p className="mt-1 text-sm text-gray-500">Boutique, paiement, API et tracking.</p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <nav className="flex border-b border-gray-200 bg-gray-50/50">
-                    <button
-                        onClick={() => setActiveTab('general')}
-                        className={`py-3.5 px-5 text-sm font-medium border-b-2 flex items-center gap-2 transition-colors ${activeTab === 'general' ? 'border-brand-500 text-brand-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
-                    >
-                        <SettingsIcon size={18} />
-                        Général
-                    </button>
-                    {user?.role === 'admin' && (
-                        <button
-                            onClick={() => setActiveTab('users')}
-                            className={`py-3.5 px-5 text-sm font-medium border-b-2 flex items-center gap-2 transition-colors ${activeTab === 'users' ? 'border-brand-500 text-brand-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
-                        >
-                            <User size={18} />
-                            Utilisateurs
-                        </button>
-                    )}
+            <div className="flex flex-col sm:flex-row gap-6">
+                {/* Sidebar */}
+                <nav className="sm:w-52 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-fit">
+                    <ul className="p-1">
+                        {sidebarSections.map(({ id, label, icon }) => (
+                            <li key={id}>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveSection(id)}
+                                    className={`w-full flex items-center gap-3 py-3 px-4 text-left text-sm font-medium rounded-lg transition-colors ${activeSection === id ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                                >
+                                    {icon}
+                                    {label}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
                 </nav>
 
-                <div className="p-6 md:p-8">
-                    {activeTab === 'general' && (
-                        <form onSubmit={handleSaveSettings} className="max-w-2xl space-y-10">
-                            {/* Section: Boutique */}
-                            <section className="space-y-4">
-                                <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2 flex items-center gap-2">
-                                    <Image size={18} className="text-gray-500" />
-                                    Boutique
-                                </h2>
-                                <div className="grid gap-4 sm:grid-cols-1">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Nom de la boutique</label>
-                                        <input
-                                            type="text"
-                                            value={shopName}
-                                            onChange={e => setShopName(e.target.value)}
-                                            className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">URL du logo</label>
-                                        <div className="flex rounded-lg border border-gray-300 overflow-hidden">
-                                            <span className="inline-flex items-center px-3 bg-gray-50 text-gray-500 text-sm border-r border-gray-300">
-                                                <Image size={16} />
-                                            </span>
+                {/* Content */}
+                <div className="flex-1 min-w-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="p-6 md:p-8">
+                        <form onSubmit={handleSaveSettings} className="space-y-6" id="settings-form">
+                            {activeSection === 'boutique' && (
+                                <section className="space-y-4">
+                                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                        <Store size={20} className="text-gray-500" />
+                                        Boutique
+                                    </h2>
+                                    <div className="grid gap-4 sm:grid-cols-1">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Nom de la boutique</label>
                                             <input
                                                 type="text"
-                                                value={logoUrl}
-                                                onChange={e => setLogoUrl(e.target.value)}
-                                                className="flex-1 min-w-0 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500 border-0"
-                                                placeholder="https://..."
+                                                value={shopName}
+                                                onChange={e => setShopName(e.target.value)}
+                                                className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500"
                                             />
                                         </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">URL du logo</label>
+                                            <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                                                <span className="inline-flex items-center px-3 bg-gray-50 text-gray-500 text-sm border-r border-gray-300">
+                                                    <Image size={16} />
+                                                </span>
+                                                <input
+                                                    type="text"
+                                                    value={logoUrl}
+                                                    onChange={e => setLogoUrl(e.target.value)}
+                                                    className="flex-1 min-w-0 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500 border-0"
+                                                    placeholder="https://..."
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </section>
+                                    <div className="pt-2">
+                                        <button type="submit" className="inline-flex items-center gap-2 py-2.5 px-5 rounded-lg text-sm font-medium text-white bg-brand-600 hover:bg-brand-700">
+                                            <Save size={18} /> Sauvegarder
+                                        </button>
+                                        {saveMessage && <span className="ml-3 text-sm text-green-600">{saveMessage}</span>}
+                                    </div>
+                                </section>
+                            )}
 
-                            {/* Section: Paiement (Stripe) */}
-                            <section className="space-y-4">
-                                <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2 flex items-center gap-2">
-                                    <Shield size={18} className="text-gray-500" />
-                                    Paiement en ligne (Stripe)
-                                </h2>
+                            {activeSection === 'paiement' && (
+                                <section className="space-y-4">
+                                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                        <CreditCard size={20} className="text-gray-500" />
+                                        Paiement en ligne (Stripe)
+                                    </h2>
                                 <div className="space-y-4 rounded-xl bg-gray-50/80 p-4 border border-gray-100">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Clé publique (publishable)</label>
@@ -199,14 +216,21 @@ export const SettingsPage: React.FC = () => {
                                         <p className="mt-1 text-xs text-gray-500">Ne partagez jamais cette clé. Utilisez sk_test_ en développement.</p>
                                     </div>
                                 </div>
-                            </section>
+                                    <div className="pt-2">
+                                        <button type="submit" className="inline-flex items-center gap-2 py-2.5 px-5 rounded-lg text-sm font-medium text-white bg-brand-600 hover:bg-brand-700">
+                                            <Save size={18} /> Sauvegarder
+                                        </button>
+                                        {saveMessage && <span className="ml-3 text-sm text-green-600">{saveMessage}</span>}
+                                    </div>
+                                </section>
+                            )}
 
-                            {/* Section: Clés API */}
-                            <section className="space-y-4">
-                                <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2 flex items-center gap-2">
-                                    <Key size={18} className="text-gray-500" />
-                                    Clés API
-                                </h2>
+                            {activeSection === 'api' && (
+                                <section className="space-y-4">
+                                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                        <Key size={20} className="text-gray-500" />
+                                        Clés API
+                                    </h2>
                                 <div className="space-y-5 rounded-xl bg-gray-50/80 p-4 border border-gray-100">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Clé API Gemini (Google)</label>
@@ -392,13 +416,21 @@ export const SettingsPage: React.FC = () => {
                                         {apiKeyError && apiKeyError !== 'key_created_before_storage' && <p className="mt-2 text-xs text-red-600">{apiKeyError}</p>}
                                     </div>
                                 </div>
-                            </section>
+                                    <div className="pt-2">
+                                        <button type="submit" className="inline-flex items-center gap-2 py-2.5 px-5 rounded-lg text-sm font-medium text-white bg-brand-600 hover:bg-brand-700">
+                                            <Save size={18} /> Sauvegarder
+                                        </button>
+                                        {saveMessage && <span className="ml-3 text-sm text-green-600">{saveMessage}</span>}
+                                    </div>
+                                </section>
+                            )}
 
-                            {/* Section: Tracking (Pixels) */}
-                            <section className="space-y-4">
-                                <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2">
-                                    Tracking &amp; pixels
-                                </h2>
+                            {activeSection === 'tracking' && (
+                                <section className="space-y-4">
+                                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                        <Activity size={20} className="text-gray-500" />
+                                        Tracking &amp; pixels
+                                    </h2>
                                 <div className="space-y-4 rounded-xl bg-gray-50/80 p-4 border border-gray-100">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Code Facebook Pixel</label>
@@ -423,48 +455,42 @@ export const SettingsPage: React.FC = () => {
                                         <p className="mt-1 text-xs text-gray-500">Injecté dans le &lt;head&gt; des landing pages.</p>
                                     </div>
                                 </div>
-                            </section>
+                                    <div className="pt-2">
+                                        <button type="submit" className="inline-flex items-center gap-2 py-2.5 px-5 rounded-lg text-sm font-medium text-white bg-brand-600 hover:bg-brand-700">
+                                            <Save size={18} /> Sauvegarder
+                                        </button>
+                                        {saveMessage && <span className="ml-3 text-sm text-green-600">{saveMessage}</span>}
+                                    </div>
+                                </section>
+                            )}
 
-                            {/* Section: Intégrations */}
-                            <section className="space-y-4">
-                                <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2 flex items-center gap-2">
-                                    <ExternalLink size={18} className="text-gray-500" />
-                                    Intégrations
-                                </h2>
-                                <div className="rounded-xl bg-gray-50/80 p-4 border border-gray-100">
-                                    <Link
-                                        to="/integrations/affiliate"
-                                        className="inline-flex items-center gap-2 text-brand-600 hover:text-brand-700 text-sm font-medium"
-                                    >
-                                        <ExternalLink size={16} />
-                                        Connecter Azome Affiliate (ou autre plateforme)
-                                    </Link>
-                                </div>
-                            </section>
-
-                            {/* Save */}
-                            <section className="pt-4 border-t border-gray-200 flex flex-wrap items-center gap-3">
-                                <button
-                                    type="submit"
-                                    className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded-lg text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
-                                >
-                                    <Save size={18} />
-                                    Sauvegarder les paramètres
-                                </button>
-                                {saveMessage && (
-                                    <span className="text-sm font-medium text-green-600">
-                                        {saveMessage}
-                                    </span>
-                                )}
-                            </section>
+                            {activeSection === 'integrations' && (
+                                <section className="space-y-4">
+                                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                        <Link2 size={20} className="text-gray-500" />
+                                        Intégrations
+                                    </h2>
+                                    <div className="rounded-xl bg-gray-50/80 p-4 border border-gray-100">
+                                        <Link
+                                            to="/integrations/affiliate"
+                                            className="inline-flex items-center gap-2 text-brand-600 hover:text-brand-700 text-sm font-medium"
+                                        >
+                                            <ExternalLink size={16} />
+                                            Connecter Azome Affiliate (ou autre plateforme)
+                                        </Link>
+                                    </div>
+                                </section>
+                            )}
                         </form>
-                    )}
 
-                    {activeTab === 'users' && user?.role === 'admin' && (
+                        {activeSection === 'users' && user?.role === 'admin' && (
                         <div className="space-y-6">
                             <section>
                                 <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                                    <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Gestion des utilisateurs</h2>
+                                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                        <User size={20} className="text-gray-500" />
+                                        Gestion des utilisateurs
+                                    </h2>
                                     <button
                                         onClick={() => { setEditingUser(null); setUserForm({ name: '', email: '', password: '', role: 'user' }); setIsUserModalOpen(true); }}
                                         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-brand-600 hover:bg-brand-700"
