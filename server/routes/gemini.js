@@ -6,6 +6,8 @@ import { authenticate } from '../middleware/auth.js';
 const router = express.Router();
 
 // Proxy endpoint for Gemini API
+// Uses @google/genai: ai.models.generateContent() — do NOT use getGenerativeModel (removed in this SDK).
+// If you see "getGenerativeModel is not a function", restart the Node server so it loads this file.
 router.post('/generate', authenticate, async (req, res) => {
   try {
     const userId = req.userId; // From authenticate middleware
