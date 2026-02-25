@@ -109,7 +109,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               </div>
             </div>
           </div>
-        </div>
         {/* Mobile menu */}
         <div className="sm:hidden flex justify-around border-t border-gray-100 py-2">
            <Link to="/" className="flex flex-col items-center text-xs text-gray-600">
