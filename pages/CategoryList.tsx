@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
+import { formatPrice } from '../src/utils/currency';
 import { Tag, Package, ChevronRight, Layers, Plus, X, Trash2 } from 'lucide-react';
 import { Product } from '../types';
 
@@ -167,7 +168,7 @@ export const CategoryList: React.FC = () => {
                     <div>
                       <h3 className="text-lg font-medium leading-6 text-gray-900">{categoryName}</h3>
                       <p className="text-sm text-gray-500">
-                        {items.length} produit{items.length !== 1 ? 's' : ''} {items.length > 0 && `• Valeur: ${totalValue.toFixed(2)} €`}
+                        {items.length} produit{items.length !== 1 ? 's' : ''} {items.length > 0 && `• Valeur: ${formatPrice(totalValue, items[0]?.currency || 'MAD')}`}
                       </p>
                     </div>
                   </div>
@@ -210,7 +211,7 @@ export const CategoryList: React.FC = () => {
                                     <p className="text-sm font-medium text-brand-600 truncate">{product.name}</p>
                                     <div className="ml-2 flex-shrink-0 flex">
                                     <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                        {product.price} €
+                                        {formatPrice(product.price, product.currency || 'MAD')}
                                     </p>
                                     </div>
                                 </div>

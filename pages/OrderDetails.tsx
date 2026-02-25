@@ -1,14 +1,16 @@
 import React, { useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
+import { formatPrice } from '../src/utils/currency';
 import { ArrowLeft, User, MapPin, Phone, Box, Calendar, CreditCard } from 'lucide-react';
 
 export const OrderDetails: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { orders, markOrderAsViewed, updateOrderStatus } = useStore();
+  const { orders, products, markOrderAsViewed, updateOrderStatus } = useStore();
   const navigate = useNavigate();
 
   const order = orders.find(o => o.id === orderId);
+  const product = order ? products.find(p => p.id === order.productId) : null;
 
   useEffect(() => {
     if (order && !order.viewed) {
@@ -97,7 +99,7 @@ export const OrderDetails: React.FC = () => {
               <div className="space-y-3">
                   <div className="flex justify-between">
                     <p className="text-base font-bold text-gray-900">{order.productName}</p>
-                    <p className="text-base font-bold text-brand-600">{order.productPrice} €</p>
+                    <p className="text-base font-bold text-brand-600">{formatPrice(order.productPrice, product?.currency || 'MAD')}</p>
                   </div>
                   <div className="border-t border-gray-100 pt-3">
                       <p className="text-xs text-gray-500 uppercase font-bold mb-2">Options choisies</p>

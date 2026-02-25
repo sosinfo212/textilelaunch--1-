@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingBag, PlusCircle, ClipboardList, Package, LayoutTemplate, Layers, LogOut, Settings } from 'lucide-react';
+import { ShoppingBag, PlusCircle, ClipboardList, Package, LayoutTemplate, Layers, LogOut, Settings, Users } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -76,6 +76,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                     </span>
                   )}
                 </Link>
+                <Link
+                  to="/clients"
+                  className={`${location.pathname.startsWith('/clients') ? 'border-brand-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
+                >
+                  <Users className="mr-2" size={16} />
+                  Clients
+                </Link>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -127,6 +134,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
            <Link to="/templates" className="flex flex-col items-center text-xs text-gray-600">
              <LayoutTemplate size={20} />
              <span>Modèles</span>
+           </Link>
+           <Link to="/clients" className="flex flex-col items-center text-xs text-gray-600">
+             <Users size={20} />
+             <span>Clients</span>
            </Link>
            <Link to="/settings" className="flex flex-col items-center text-xs text-gray-600">
              <Settings size={20} />

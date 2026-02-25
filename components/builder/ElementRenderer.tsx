@@ -116,7 +116,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element }) => 
     case 'product-price':
       return (
         <div style={style} className="font-bold">
-          {element.content || '{product_price} €'}
+          {element.content || '{product_price}'}
         </div>
       );
 

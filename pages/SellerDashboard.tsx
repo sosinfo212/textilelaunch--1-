@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
+import { formatPrice } from '../src/utils/currency';
 import { ExternalLink, Edit2, Tag, Box, Truck, Trash2, BarChart2 } from 'lucide-react';
 
 export const SellerDashboard: React.FC = () => {
@@ -130,11 +131,11 @@ export const SellerDashboard: React.FC = () => {
                 <div className="absolute top-2 right-2 flex flex-col items-end">
                    {product.regularPrice && product.regularPrice > product.price && (
                        <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded mb-1 line-through opacity-80 backdrop-blur shadow-sm">
-                           {product.regularPrice} €
+                           {formatPrice(product.regularPrice, product.currency || 'MAD')}
                        </span>
                    )}
                   <span className="bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-gray-900 shadow-sm">
-                    {product.price} €
+                    {formatPrice(product.price, product.currency || 'MAD')}
                   </span>
                 </div>
               </div>

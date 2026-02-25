@@ -114,11 +114,11 @@ export const LandingPageRenderer: React.FC<RendererProps> = ({
                             <div style={{ color: style.color, textAlign: style.textAlign }} className={`flex flex-col ${style.fontSize || 'text-3xl'}`}>
                                 {product.regularPrice && product.regularPrice > product.price && (
                                     <span className="text-gray-500 line-through text-lg mb-1 opacity-70">
-                                        {product.regularPrice} €
+                                        {formatPrice(product.regularPrice, product.currency || 'MAD')}
                                     </span>
                                 )}
                                 <span className="font-bold">
-                                    {product.price} €
+                                    {formatPrice(product.price, product.currency || 'MAD')}
                                 </span>
                             </div>
                         )}
