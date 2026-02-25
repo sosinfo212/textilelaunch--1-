@@ -358,7 +358,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         mode: template.mode,
         elements: template.elements,
         layout: template.layout,
-        htmlCode: template.htmlCode
+        htmlCode: template.htmlCode,
+        previewImageUrl: template.previewImageUrl
       };
       const res = await templatesAPI.create(templateData);
       const newTemplate = res.template;
@@ -379,7 +380,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         mode: template.mode,
         elements: template.elements,
         layout: template.layout,
-        htmlCode: template.htmlCode
+        htmlCode: template.htmlCode,
+        previewImageUrl: template.previewImageUrl
       };
       const res = await templatesAPI.update(template.id, templateData);
       const updatedTemplate = res.template;

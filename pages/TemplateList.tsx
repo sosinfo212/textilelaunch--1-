@@ -6,11 +6,13 @@ import { TEMPLATE_LIBRARY, TemplatePreset } from '../constants/templateLibrary';
 import { LandingPageTemplate } from '../types';
 
 export const TemplateList: React.FC = () => {
-  const { templates, deleteTemplate, addTemplate } = useStore();
+  const { templates, deleteTemplate, addTemplate, updateTemplate } = useStore();
   const navigate = useNavigate();
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('Tout');
   const [isAdding, setIsAdding] = useState<string | null>(null);
+  const [previewModalTemplate, setPreviewModalTemplate] = useState<LandingPageTemplate | null>(null);
+  const [previewUrlInput, setPreviewUrlInput] = useState('');
 
   // Extract unique categories
   const categories = ['Tout', ...Array.from(new Set(TEMPLATE_LIBRARY.map(t => t.category)))];
@@ -93,12 +95,43 @@ export const TemplateList: React.FC = () => {
           {templates.map((template) => (
             <div key={template.id} className="bg-white overflow-hidden shadow rounded-lg border border-gray-100 hover:shadow-md transition-all duration-200 group">
               <div className="h-32 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center border-b border-gray-100 relative overflow-hidden">
-                  {/* Abstract Preview based on content */}
-                  <div className="space-y-2 w-1/2 opacity-40 transform group-hover:scale-105 transition-transform duration-300">
-                      <div className="h-2 bg-gray-400 rounded w-full"></div>
-                      <div className="h-2 bg-gray-400 rounded w-2/3 mx-auto"></div>
-                      <div className="h-8 bg-gray-300 rounded w-full mt-2 shadow-sm"></div>
-                  </div>
+                  {template.previewImageUrl ? (
+                    <>
+                      <img
+                        src={template.previewImageUrl}
+                        alt=""
+                        className="w-full h-full object-cover object-top"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewModalTemplate(template);
+                          setPreviewUrlInput(template.previewImageUrl || '');
+                        }}
+                        className="absolute bottom-1 right-1 text-xs px-2 py-1 rounded bg-white/90 text-gray-600 hover:bg-white shadow border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        Changer
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-2 w-1/2 opacity-40 transform group-hover:scale-105 transition-transform duration-300">
+                        <div className="h-2 bg-gray-400 rounded w-full"></div>
+                        <div className="h-2 bg-gray-400 rounded w-2/3 mx-auto"></div>
+                        <div className="h-8 bg-gray-300 rounded w-full mt-2 shadow-sm"></div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewModalTemplate(template);
+                          setPreviewUrlInput(template.previewImageUrl || '');
+                        }}
+                        className="absolute bottom-1 right-1 text-xs px-2 py-1 rounded bg-white/90 text-gray-600 hover:bg-white shadow border border-gray-200"
+                      >
+                        Ajouter une prévisualisation
+                      </button>
+                    </>
+                  )}
               </div>
               <div className="p-5">
                 <h3 className="text-lg font-bold text-gray-900 truncate">
@@ -260,6 +293,47 @@ export const TemplateList: React.FC = () => {
                     ))}
                 </div>
                 )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Set preview image URL modal */}
+      {previewModalTemplate && (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Image de prévisualisation</h3>
+            <p className="text-sm text-gray-500 mb-4">Collez l’URL d’une image pour l’afficher sur la carte du modèle.</p>
+            <input
+              type="url"
+              value={previewUrlInput}
+              onChange={(e) => setPreviewUrlInput(e.target.value)}
+              placeholder="https://..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+            />
+            <div className="mt-4 flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviewModalTemplate(null);
+                  setPreviewUrlInput('');
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const url = previewUrlInput.trim() || undefined;
+                  await updateTemplate({ ...previewModalTemplate, previewImageUrl: url });
+                  setPreviewModalTemplate(null);
+                  setPreviewUrlInput('');
+                }}
+                className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700"
+              >
+                Enregistrer
+              </button>
             </div>
           </div>
         </div>

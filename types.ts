@@ -114,6 +114,7 @@ export interface LandingPageTemplate {
   elements: PageElement[]; // Used if mode === 'visual' or 'drag-drop'
   layout?: any; // JSON layout for drag-drop mode (stores position, size, etc.)
   htmlCode?: string; // NEW: Used if mode === 'code'
+  previewImageUrl?: string; // Optional thumbnail for template list
   createdAt: number;
 }
 

@@ -66,7 +66,7 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { name, mode = 'visual', elements, layout, htmlCode } = req.body;
+    const { name, mode = 'visual', elements, layout, htmlCode, previewImageUrl } = req.body;
 
     if (!name || String(name).trim() === '') {
       return res.status(400).json({ error: 'Name is required' });
@@ -76,18 +76,19 @@ router.post('/', authenticate, async (req, res) => {
     const elementsJson = JSON.stringify(elements || []);
     const layoutJson = layout ? JSON.stringify(layout) : null;
     const htmlCodeValue = htmlCode != null && htmlCode !== '' ? String(htmlCode) : null;
+    const previewUrl = previewImageUrl && String(previewImageUrl).trim() ? String(previewImageUrl).trim() : null;
 
     try {
       await db.execute(
         `INSERT INTO landing_page_templates (
-          id, owner_id, name, mode, elements, layout, html_code
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [id, userId, String(name).trim(), mode, elementsJson, layoutJson, htmlCodeValue]
+          id, owner_id, name, mode, elements, layout, html_code, preview_image_url
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, userId, String(name).trim(), mode, elementsJson, layoutJson, htmlCodeValue, previewUrl]
       );
     } catch (insertErr) {
       const msg = (insertErr.message || '').toLowerCase();
-      // If layout column is missing (older DB), retry without it
-      if (msg.includes("unknown column 'layout'")) {
+      // If layout or preview_image_url column is missing (older DB), retry with fewer columns
+      if (msg.includes("unknown column 'layout'") || msg.includes("unknown column 'preview_image_url'")) {
         await db.execute(
           `INSERT INTO landing_page_templates (
             id, owner_id, name, mode, elements, html_code
@@ -141,17 +142,43 @@ router.put('/:id', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const { name, mode, elements, layout, htmlCode } = req.body;
+    const { name, mode, elements, layout, htmlCode, previewImageUrl } = req.body;
     const elementsJson = JSON.stringify(elements || []);
     const layoutJson = layout ? JSON.stringify(layout) : null;
     const htmlCodeValue = htmlCode || null;
+    const previewUrl = previewImageUrl !== undefined
+      ? (previewImageUrl && String(previewImageUrl).trim() ? String(previewImageUrl).trim() : null)
+      : undefined;
 
-    await db.execute(
-      `UPDATE landing_page_templates SET 
-        name = ?, mode = ?, elements = ?, layout = ?, html_code = ?
-      WHERE id = ?`,
-      [name, mode || 'visual', elementsJson, layoutJson, htmlCodeValue, id]
-    );
+    try {
+      if (previewUrl !== undefined) {
+        await db.execute(
+          `UPDATE landing_page_templates SET 
+            name = ?, mode = ?, elements = ?, layout = ?, html_code = ?, preview_image_url = ?
+          WHERE id = ?`,
+          [name, mode || 'visual', elementsJson, layoutJson, htmlCodeValue, previewUrl, id]
+        );
+      } else {
+        await db.execute(
+          `UPDATE landing_page_templates SET 
+            name = ?, mode = ?, elements = ?, layout = ?, html_code = ?
+          WHERE id = ?`,
+          [name, mode || 'visual', elementsJson, layoutJson, htmlCodeValue, id]
+        );
+      }
+    } catch (updateErr) {
+      const msg = (updateErr.message || '').toLowerCase();
+      if (msg.includes("unknown column 'preview_image_url'")) {
+        await db.execute(
+          `UPDATE landing_page_templates SET 
+            name = ?, mode = ?, elements = ?, layout = ?, html_code = ?
+          WHERE id = ?`,
+          [name, mode || 'visual', elementsJson, layoutJson, htmlCodeValue, id]
+        );
+      } else {
+        throw updateErr;
+      }
+    }
 
     const [templates] = await db.execute(
       'SELECT * FROM landing_page_templates WHERE id = ?',
@@ -245,6 +272,7 @@ function formatTemplate(row) {
     elements: elements,
     layout: layout || undefined,
     htmlCode: row.html_code || undefined,
+    previewImageUrl: row.preview_image_url || undefined,
     createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now()
   };
 }
