@@ -24,6 +24,7 @@ const AVAILABLE_TAGS = [
     { tag: '{trust_badges}', desc: 'Badges confiance (livraison, paiement)' },
     { tag: '{product_description}', desc: 'Description brute (HTML ou texte)' },
     { tag: '{product_description_section}', desc: 'Section « Description » avec titre' },
+    { tag: '{product_reviews}', desc: 'Avis clients (auteur, note, texte)' },
     { tag: '{sticky_cta}', desc: 'Barre fixe bas. Option: {sticky_cta|Order Now}' },
 ];
 
