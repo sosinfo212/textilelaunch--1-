@@ -32,9 +32,8 @@ router.post('/generate', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Invalid Gemini API key format. API keys should start with "AIzaSy" and be at least 30 characters long.' });
     }
 
-    // Initialize Gemini
+    // Initialize Gemini (@google/genai: use ai.models.generateContent, not getGenerativeModel)
     const ai = new GoogleGenAI({ apiKey });
-    const model = ai.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
     // Build the prompt
     const fullPrompt = prompt || 
@@ -42,9 +41,11 @@ router.post('/generate', authenticate, async (req, res) => {
       Mots-clés: ${keywords || 'textile, mode, confort, qualité'}. 
       La description doit être engageante, professionnelle et optimisée pour la vente.`;
 
-    const result = await model.generateContent(fullPrompt);
-    const response = await result.response;
-    const text = response.text();
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: fullPrompt,
+    });
+    const text = response.text ?? '';
 
     res.json({ text });
   } catch (error) {
