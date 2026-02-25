@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingBag, PlusCircle, ClipboardList, Package, LayoutTemplate, Layers, LogOut, Settings, Users } from 'lucide-react';
+import { ShoppingBag, ClipboardList, Package, LayoutTemplate, Layers, LogOut, Settings, Users } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -85,18 +85,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 </Link>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-                <Link
-                  to="/add-product"
-                  className="hidden md:inline-flex items-center justify-center px-4 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 h-9"
-              >
-                <PlusCircle className="mr-2 -ml-1" size={16} />
-                Nouveau Produit
-              </Link>
-              
-              <div className="h-6 w-px bg-gray-200 mx-2 hidden md:block"></div>
-              
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
                   <div className="hidden md:flex flex-col items-end mr-1">
                       <span className="text-xs font-medium text-gray-700">{user?.name}</span>
                       <span className="text-[10px] text-gray-500">{user?.email}</span>
