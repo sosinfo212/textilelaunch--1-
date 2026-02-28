@@ -3,14 +3,19 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { formatPrice } from '../src/utils/currency';
 import { scraperAPI, settingsAPI } from '../src/utils/api';
-import { ExternalLink, Edit2, Tag, Box, Truck, Trash2, BarChart2, Plus, Scissors, X, RefreshCw, Filter } from 'lucide-react';
+import { Eye, Edit2, Tag, Box, Truck, Trash2, BarChart2, Plus, Scissors, X, RefreshCw, Filter } from 'lucide-react';
 import { Product } from '../types';
 
 export const SellerDashboard: React.FC = () => {
-  const { products, categories, deleteProduct, deleteProducts, refreshData, loading } = useStore();
+  const { products, categories, deleteProduct, deleteProducts, updateProduct, getProduct, refreshData, loading } = useStore();
   const navigate = useNavigate();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkEditing, setBulkEditing] = useState(false);
+  const [bulkEditModalOpen, setBulkEditModalOpen] = useState(false);
+  const [bulkEditCategory, setBulkEditCategory] = useState('');
+  const [bulkEditPriceMode, setBulkEditPriceMode] = useState<'fixed' | 'percent'>('fixed');
+  const [bulkEditPriceValue, setBulkEditPriceValue] = useState<string>('');
   const [refreshing, setRefreshing] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [filterName, setFilterName] = useState('');
@@ -106,6 +111,46 @@ export const SellerDashboard: React.FC = () => {
     }
   };
 
+  const handleBulkEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    const setCategory = bulkEditCategory.trim() !== '';
+    const setPrice = bulkEditPriceValue.trim() !== '' && !isNaN(Number(bulkEditPriceValue));
+    if (!setCategory && !setPrice) {
+      setBulkEditModalOpen(false);
+      return;
+    }
+    setBulkEditing(true);
+    try {
+      for (const id of ids) {
+        const product = getProduct(id);
+        if (!product) continue;
+        const updates: Partial<Product> = {};
+        if (setCategory) updates.category = bulkEditCategory.trim();
+        if (setPrice) {
+          const num = Number(bulkEditPriceValue);
+          const current = product.price ?? 0;
+          updates.price = bulkEditPriceMode === 'fixed'
+            ? Math.max(0, Math.round((current + num) * 100) / 100)
+            : Math.max(0, Math.round(current * (1 + num / 100) * 100) / 100);
+        }
+        if (Object.keys(updates).length > 0) {
+          await updateProduct({ ...product, ...updates });
+        }
+      }
+      setSelectedIds(new Set());
+      setBulkEditModalOpen(false);
+      setBulkEditCategory('');
+      setBulkEditPriceValue('');
+    } catch (error) {
+      alert('Erreur lors de la modification des produits');
+      console.error(error);
+    } finally {
+      setBulkEditing(false);
+    }
+  };
+
   const handleScrapSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!scrapUrl.trim()) {
@@ -148,10 +193,10 @@ export const SellerDashboard: React.FC = () => {
   };
 
   return (
-    <div className="flex gap-6">
-      {/* Sidebar filters */}
-      <aside className={`flex-shrink-0 w-64 transition-all overflow-hidden ${sidebarOpen ? '' : 'w-0 opacity-0'}`}>
-        <div className="w-64 space-y-4 pr-4 border-r border-gray-200 min-h-0">
+    <div className="flex gap-6 min-h-[calc(100vh-8rem)]">
+      {/* Sidebar filters - fixed when scrolling (main content scrolls) */}
+      <aside className={`flex-shrink-0 transition-all overflow-hidden ${sidebarOpen ? 'w-64' : 'w-0 opacity-0'}`}>
+        <div className="w-64 sticky top-24 max-h-[calc(100vh-6rem)] overflow-y-auto space-y-4 pr-4 border-r border-gray-200 py-1">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
               <Filter className="h-4 w-4" />
@@ -246,7 +291,7 @@ export const SellerDashboard: React.FC = () => {
         </div>
       </aside>
 
-      <div className="flex-1 min-w-0 space-y-6">
+      <div className="flex-1 min-w-0 min-h-0 overflow-y-auto space-y-6">
       <div className="flex justify-between items-end flex-wrap gap-3">
         <div className="flex items-center gap-2">
           {!sidebarOpen && (
@@ -301,15 +346,28 @@ export const SellerDashboard: React.FC = () => {
               />
               Tout sélectionner
             </label>
-            <button
-              type="button"
-              onClick={handleBulkDelete}
-              disabled={selectedIds.size === 0 || bulkDeleting}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-300 text-red-700 text-sm font-medium rounded-md bg-white hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Trash2 className="h-4 w-4" />
-              {bulkDeleting ? 'Suppression...' : `Supprimer (${selectedIds.size})`}
-            </button>
+            {selectedIds.size > 0 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setBulkEditModalOpen(true)}
+                  disabled={bulkEditing}
+                  className="p-2 border border-gray-300 text-gray-700 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50"
+                  title="Modifier en masse"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="p-2 border border-red-300 text-red-700 rounded-md bg-white hover:bg-red-50 disabled:opacity-50"
+                  title="Supprimer la sélection"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </>
+            )}
           </>
         )}
         </div>
@@ -423,9 +481,9 @@ export const SellerDashboard: React.FC = () => {
                   <Link
                     to={`/product/${product.id}`}
                     className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-brand-600 hover:bg-brand-700"
+                    title="Voir la page"
                   >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Voir la page
+                    <Eye className="h-4 w-4" />
                   </Link>
                   <Link
                     to={`/product/${product.id}/analytics`}
@@ -455,6 +513,94 @@ export const SellerDashboard: React.FC = () => {
         </div>
       )}
       </div>
+
+      {/* Bulk edit modal */}
+      {bulkEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Modifier en masse ({selectedIds.size} produit{selectedIds.size > 1 ? 's' : ''})</h3>
+              <button
+                type="button"
+                onClick={() => !bulkEditing && setBulkEditModalOpen(false)}
+                disabled={bulkEditing}
+                className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleBulkEditSubmit} className="px-6 py-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
+                <select
+                  value={bulkEditCategory}
+                  onChange={(e) => setBulkEditCategory(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                >
+                  <option value="">Ne pas modifier</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Prix (augmenter)</label>
+                <div className="flex gap-2 items-center flex-wrap">
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="bulkPriceMode"
+                      checked={bulkEditPriceMode === 'fixed'}
+                      onChange={() => setBulkEditPriceMode('fixed')}
+                      className="text-brand-600 focus:ring-brand-500"
+                    />
+                    <span className="text-sm">Valeur fixe</span>
+                  </label>
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="bulkPriceMode"
+                      checked={bulkEditPriceMode === 'percent'}
+                      onChange={() => setBulkEditPriceMode('percent')}
+                      className="text-brand-600 focus:ring-brand-500"
+                    />
+                    <span className="text-sm">%</span>
+                  </label>
+                </div>
+                <input
+                  type="number"
+                  step={bulkEditPriceMode === 'percent' ? 0.1 : 0.01}
+                  min={bulkEditPriceMode === 'percent' ? -100 : undefined}
+                  value={bulkEditPriceValue}
+                  onChange={(e) => setBulkEditPriceValue(e.target.value)}
+                  placeholder={bulkEditPriceMode === 'percent' ? 'Ex: 10' : 'Ex: 5.50'}
+                  className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  {bulkEditPriceMode === 'fixed' ? 'Ajouter cette valeur au prix actuel de chaque produit.' : 'Augmenter le prix de ce pourcentage (ex: 10 = +10%).'}
+                </p>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setBulkEditModalOpen(false)}
+                  disabled={bulkEditing}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={bulkEditing || (bulkEditCategory.trim() === '' && bulkEditPriceValue.trim() === '')}
+                  className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50"
+                >
+                  {bulkEditing ? 'Application...' : 'Appliquer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Scrap modal */}
       {scrapModalOpen && (
