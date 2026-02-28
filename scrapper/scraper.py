@@ -568,6 +568,10 @@ async def main(
     timeout_ms: int = DEFAULT_TIMEOUT_MS,
     verbose: bool = False,
     limit: Optional[int] = None,
+    api_base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+    do_api_sync: bool = False,
+    use_import_endpoint: bool = False,
 ) -> list[dict[str, Any]]:
     setup_logging(verbose=verbose)
     config = get_website_config(website_url)
@@ -635,6 +639,15 @@ async def main(
                         "attributes": product_data.get("attributes", []),
                     }
                     results.append(output_item)
+                    # Push to API immediately after each product (don't wait for full scrape)
+                    if do_api_sync and api_base_url and api_key:
+                        sync_products_to_api(
+                            [output_item],
+                            api_base_url,
+                            api_key,
+                            use_import_endpoint=use_import_endpoint,
+                            skip_invalid=True,
+                        )
                 except Exception as e:
                     logger.exception("Error scraping product %s: %s", url, e)
                     results.append({
@@ -757,6 +770,10 @@ def cli() -> None:
             logger.info("API sync done: %d success, %d failure", success, failure)
         return
 
+    if args.api_sync and not api_key:
+        logger.error("TEXTILELAUNCH_API_KEY is required for --api-sync. Set the environment variable.")
+        sys.exit(1)
+
     import asyncio
     results = asyncio.run(
         main(
@@ -768,19 +785,14 @@ def cli() -> None:
             timeout_ms=args.timeout,
             verbose=args.verbose,
             limit=limit,
+            api_base_url=api_base_url if args.api_sync else None,
+            api_key=api_key if args.api_sync else None,
+            do_api_sync=bool(args.api_sync),
+            use_import_endpoint=not args.api_single,
         )
     )
 
-    if args.api_sync and results:
-        if not api_key:
-            logger.error("TEXTILELAUNCH_API_KEY is required for --api-sync. Set the environment variable.")
-            sys.exit(1)
-        success, failure, errors = sync_products_to_api(
-            results, api_base_url, api_key, use_import_endpoint=not args.api_single, skip_invalid=True
-        )
-        for err in errors:
-            logger.warning("API error: %s", err)
-        logger.info("API sync done: %d success, %d failure", success, failure)
+    # Products are pushed one-by-one inside main() when do_api_sync is True; no bulk sync at end
 
 
 if __name__ == "__main__":
