@@ -118,7 +118,7 @@ export const SettingsPage: React.FC = () => {
     return (
         <div className="max-w-5xl mx-auto">
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
                 <p className="mt-1 text-sm text-gray-500">Boutique, paiement, API et tracking.</p>
                 <p className="mt-2 text-xs text-gray-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
                     Ces paramètres sont <strong>propres à votre compte</strong>. Vos pages produit utiliseront votre Facebook Pixel, TikTok Pixel, clés Stripe et clés API.
@@ -131,18 +131,18 @@ export const SettingsPage: React.FC = () => {
                     <ul className="p-1">
                         {sidebarSections.map(({ id, label, icon }) => (
                             <li key={id}>
-                                <button
+                        <button
                                     type="button"
                                     onClick={() => setActiveSection(id)}
                                     className={`w-full flex items-center gap-3 py-3 px-4 text-left text-sm font-medium rounded-lg transition-colors ${activeSection === id ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'}`}
-                                >
+                        >
                                     {icon}
                                     {label}
-                                </button>
+                        </button>
                             </li>
                         ))}
                     </ul>
-                </nav>
+                    </nav>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -155,30 +155,30 @@ export const SettingsPage: React.FC = () => {
                                         Boutique
                                     </h2>
                                     <div className="grid gap-4 sm:grid-cols-1">
-                                        <div>
+                            <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Nom de la boutique</label>
-                                            <input
-                                                type="text"
-                                                value={shopName}
-                                                onChange={e => setShopName(e.target.value)}
+                                    <input
+                                        type="text"
+                                        value={shopName}
+                                        onChange={e => setShopName(e.target.value)}
                                                 className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500"
-                                            />
-                                        </div>
-                                        <div>
+                                    />
+                                </div>
+                            <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">URL du logo</label>
                                             <div className="flex rounded-lg border border-gray-300 overflow-hidden">
                                                 <span className="inline-flex items-center px-3 bg-gray-50 text-gray-500 text-sm border-r border-gray-300">
-                                                    <Image size={16} />
-                                                </span>
-                                                <input
-                                                    type="text"
-                                                    value={logoUrl}
-                                                    onChange={e => setLogoUrl(e.target.value)}
+                                        <Image size={16} />
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={logoUrl}
+                                        onChange={e => setLogoUrl(e.target.value)}
                                                     className="flex-1 min-w-0 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500 border-0"
-                                                    placeholder="https://..."
-                                                />
-                                            </div>
-                                        </div>
+                                        placeholder="https://..."
+                                    />
+                                </div>
+                            </div>
                                     </div>
                                     <div className="pt-2">
                                         <button type="submit" className="inline-flex items-center gap-2 py-2.5 px-5 rounded-lg text-sm font-medium text-white bg-brand-600 hover:bg-brand-700">
@@ -237,20 +237,20 @@ export const SettingsPage: React.FC = () => {
                                     </h2>
                                     <p className="text-sm text-gray-600">Votre clé Gemini (descriptions) et votre clé API TextileLaunch (import, etc.) sont propres à votre compte.</p>
                                 <div className="space-y-5 rounded-xl bg-gray-50/80 p-4 border border-gray-100">
-                                    <div>
+                            <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Clé API Gemini (Google)</label>
                                         <div className="flex rounded-lg border border-gray-300 overflow-hidden">
                                             <span className="inline-flex items-center px-3 bg-gray-50 text-gray-500 text-sm border-r border-gray-300">
-                                                <Key size={16} />
-                                            </span>
-                                            <input
-                                                type="password"
-                                                value={geminiApiKey}
-                                                onChange={e => setGeminiApiKey(e.target.value)}
+                                        <Key size={16} />
+                                    </span>
+                                    <input
+                                        type="password"
+                                        value={geminiApiKey}
+                                        onChange={e => setGeminiApiKey(e.target.value)}
                                                 className="flex-1 min-w-0 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500 border-0"
-                                                placeholder="AIzaSy..."
-                                            />
-                                        </div>
+                                        placeholder="AIzaSy..."
+                                    />
+                                </div>
                                         <p className="mt-1 text-xs text-gray-500">Nécessaire pour la génération automatique de descriptions produit.</p>
                                     </div>
                                     <div>
@@ -388,13 +388,13 @@ export const SettingsPage: React.FC = () => {
                                                     <p className="text-xs text-gray-500 mb-4">Utilisez cette clé dans l’en-tête : <code className="bg-gray-200 px-1 rounded">Authorization: Bearer &lt;clé&gt;</code></p>
                                                     <button type="button" onClick={() => setViewApiKeyModal(null)} className="w-full py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Fermer</button>
                                                 </div>
-                                            </div>
+                            </div>
                                         )}
                                         {newApiKey && <p className="mt-2 text-xs text-amber-700">Clé enregistrée. Vous pouvez la voir ou la régénérer plus tard.</p>}
                                         {apiKeyError === 'key_created_before_storage' && (
                                             <div className="mt-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
                                                 <p className="text-sm text-amber-800 mb-2">Cette clé a été créée avant l’enregistrement. Régénérez la clé pour pouvoir la consulter ensuite.</p>
-                                                <button
+                                <button
                                                     type="button"
                                                     onClick={async () => {
                                                         if (!window.confirm('Remplacer la clé actuelle ? L’ancienne ne fonctionnera plus.')) return;
@@ -464,7 +464,7 @@ export const SettingsPage: React.FC = () => {
                                     <div className="pt-2">
                                         <button type="submit" className="inline-flex items-center gap-2 py-2.5 px-5 rounded-lg text-sm font-medium text-white bg-brand-600 hover:bg-brand-700">
                                             <Save size={18} /> Sauvegarder
-                                        </button>
+                                </button>
                                         {saveMessage && <span className="ml-3 text-sm text-green-600">{saveMessage}</span>}
                                     </div>
                                 </section>
@@ -484,7 +484,7 @@ export const SettingsPage: React.FC = () => {
                                             <ExternalLink size={16} />
                                             Connecter Azome Affiliate (ou autre plateforme)
                                         </Link>
-                                    </div>
+                            </div>
                                 </section>
                             )}
                         </form>
@@ -497,52 +497,52 @@ export const SettingsPage: React.FC = () => {
                                         <User size={20} className="text-gray-500" />
                                         Gestion des utilisateurs
                                     </h2>
-                                    <button
+                                <button
                                         onClick={() => { setEditingUser(null); setUserForm({ name: '', email: '', password: '', role: 'user' }); setIsUserModalOpen(true); }}
                                         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-brand-600 hover:bg-brand-700"
-                                    >
+                                >
                                         <Plus size={16} />
                                         Ajouter un utilisateur
-                                    </button>
-                                </div>
+                                </button>
+                            </div>
                                 <div className="overflow-x-auto rounded-xl border border-gray-200">
-                                    <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-50">
-                                            <tr>
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
                                                 <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
                                                 <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                                                 <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rôle</th>
                                                 <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="bg-white divide-y divide-gray-200">
-                                            {users.map((u) => (
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {users.map((u) => (
                                                 <tr key={u.id} className="hover:bg-gray-50/50">
                                                     <td className="px-5 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{u.name}</td>
                                                     <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">{u.email}</td>
                                                     <td className="px-5 py-4 whitespace-nowrap">
                                                         <span className={`inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
-                                                            {u.role === 'admin' ? 'Admin' : 'Vendeur'}
-                                                        </span>
-                                                    </td>
+                                                        {u.role === 'admin' ? 'Admin' : 'Vendeur'}
+                                                    </span>
+                                                </td>
                                                     <td className="px-5 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                                                         <button type="button" onClick={() => openEditUser(u)} className="text-brand-600 hover:text-brand-800">Éditer</button>
-                                                        {u.id !== user.id && (
+                                                    {u.id !== user.id && (
                                                             <button type="button" onClick={() => handleDeleteUser(u.id)} className="text-red-600 hover:text-red-800 inline-flex items-center">
                                                                 <Trash2 size={14} />
-                                                            </button>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                             </section>
                         </div>
                     )}
                 </div>
-            </div>
+                </div>
             </div>
 
             {/* User Modal */}
