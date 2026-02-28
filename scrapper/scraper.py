@@ -648,17 +648,31 @@ def cli() -> None:
         "--website",
         default=os.environ.get("SCRAPER_WEBSITE_URL", DEFAULT_WEBSITE_URL),
         metavar="URL",
-        help="Base website URL (e.g. https://pyjamachamal.com). Login and products paths are /login and /affiliate/products.",
+        help="Base website URL to scrape (e.g. https://pyjamachamal.com).",
     )
     parser.add_argument(
         "--email",
         default=os.environ.get("PYJAMA_EMAIL", "othmane.elmeziani@gmail.com"),
-        help="Login email (or set PYJAMA_EMAIL)",
+        metavar="EMAIL",
+        help="Login email for the website.",
     )
     parser.add_argument(
         "--password",
         default=os.environ.get("PYJAMA_PASSWORD", "sosinfo@212"),
-        help="Login password (or set PYJAMA_PASSWORD)",
+        metavar="PASSWORD",
+        help="Login password for the website.",
+    )
+    parser.add_argument(
+        "--api-key",
+        default=None,
+        metavar="KEY",
+        help="TextileLaunch API key (overrides env/default).",
+    )
+    parser.add_argument(
+        "--api-url",
+        default=None,
+        metavar="URL",
+        help="TextileLaunch API base URL (e.g. https://trendycosmetix.com/api).",
     )
     parser.add_argument("--no-headless", action="store_true", help="Run browser with GUI")
     parser.add_argument("-o", "--output", default="products.json", help="Output JSON file path")
@@ -688,8 +702,17 @@ def cli() -> None:
     limit = 1 if args.single else args.limit
     setup_logging(verbose=args.verbose)
 
-    api_base_url = (os.environ.get(TEXTILELAUNCH_API_URL_ENV) or "").strip() or DEFAULT_API_BASE_URL
-    api_key = (os.environ.get(TEXTILELAUNCH_API_KEY_ENV) or DEFAULT_API_KEY).strip()
+    # CLI overrides env overrides default
+    api_base_url = (
+        (args.api_url or "").strip()
+        or (os.environ.get(TEXTILELAUNCH_API_URL_ENV) or "").strip()
+        or DEFAULT_API_BASE_URL
+    )
+    api_key = (
+        (args.api_key or "").strip()
+        or (os.environ.get(TEXTILELAUNCH_API_KEY_ENV) or "").strip()
+        or DEFAULT_API_KEY
+    ).strip()
 
     if args.load:
         # Load from file and optionally sync to API
