@@ -83,8 +83,12 @@ router.post('/run', authenticate, express.json(), async (req, res) => {
     ...process.env,
     TEXTILELAUNCH_API_KEY: apiKey,
   };
-  const apiBase = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') + '/api' : undefined;
-  if (apiBase) env.TEXTILELAUNCH_API_URL = apiBase;
+  // So the scraper pushes to this app's API: production URL or localhost when FRONTEND_URL unset (dev)
+  const port = process.env.PORT || 5001;
+  const apiBase = process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.replace(/\/$/, '') + '/api'
+    : `http://localhost:${port}/api`;
+  env.TEXTILELAUNCH_API_URL = apiBase;
 
   const projectRoot = dirname(dirname(SCRAPER_PATH));
   const child = spawn(pythonCmd, args, {
