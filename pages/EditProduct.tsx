@@ -65,7 +65,7 @@ export const EditProduct: React.FC = () => {
         setShowReviews(p.showReviews !== false);
       } else {
         alert("Produit introuvable");
-        navigate('/');
+        navigate('/products');
       }
     }
   }, [productId, getProduct, navigate]);
@@ -196,7 +196,7 @@ export const EditProduct: React.FC = () => {
     };
     try {
       await updateProduct(updatedProduct);
-      navigate('/');
+      navigate('/products');
     } catch (error) {
       alert('Erreur lors de la mise à jour du produit. Veuillez réessayer.');
       console.error(error);
@@ -692,7 +692,7 @@ export const EditProduct: React.FC = () => {
         <div className="pt-5 flex justify-end">
             <button
               type="button"
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/products')}
               className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none"
             >
               Annuler
