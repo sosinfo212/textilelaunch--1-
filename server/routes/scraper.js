@@ -11,7 +11,15 @@ const __dirname = dirname(__filename);
 
 const router = express.Router();
 
-const SCRAPER_PATH = join(__dirname, '..', '..', 'scrapper', 'scraper.py');
+function findScraperPath() {
+  const fromModule = join(__dirname, '..', '..', 'scrapper', 'scraper.py');
+  if (existsSync(fromModule)) return fromModule;
+  const fromCwd = join(process.cwd(), 'scrapper', 'scraper.py');
+  if (existsSync(fromCwd)) return fromCwd;
+  return fromModule;
+}
+
+const getScraperPath = () => findScraperPath();
 
 router.post('/run', authenticate, express.json(), async (req, res) => {
   const userId = req.userId;
@@ -50,8 +58,11 @@ router.post('/run', authenticate, express.json(), async (req, res) => {
     apiKey = String(apiKey).trim();
   }
 
+  const SCRAPER_PATH = getScraperPath();
   if (!existsSync(SCRAPER_PATH)) {
-    return res.status(503).json({ error: 'Scraper script not found. Ensure scrapper/scraper.py exists.' });
+    return res.status(503).json({
+      error: 'Scraper script not found. Add the scrapper folder to the project and ensure scrapper/scraper.py exists (e.g. commit and deploy scrapper/).',
+    });
   }
 
   const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
@@ -75,8 +86,9 @@ router.post('/run', authenticate, express.json(), async (req, res) => {
   const apiBase = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') + '/api' : undefined;
   if (apiBase) env.TEXTILELAUNCH_API_URL = apiBase;
 
+  const projectRoot = dirname(dirname(SCRAPER_PATH));
   const child = spawn(pythonCmd, args, {
-    cwd: join(__dirname, '..', '..'),
+    cwd: projectRoot,
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
