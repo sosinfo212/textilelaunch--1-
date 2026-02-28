@@ -423,11 +423,12 @@ export const integrationsAPI = {
   },
 };
 
-// Scraper (run Python scraper, stream output)
+// Scraper (run Python scraper, stream output; pass signal to cancel and stop the script)
 export const scraperAPI = {
   run: async (
     body: { url: string; email: string; password: string; apiKey?: string },
-    onChunk: (text: string) => void
+    onChunk: (text: string) => void,
+    signal?: AbortSignal
   ): Promise<void> => {
     const url = `${API_BASE_URL}/scraper/run`;
     const response = await fetch(url, {
@@ -435,6 +436,7 @@ export const scraperAPI = {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(body),
+      signal,
     });
     if (!response.ok) {
       let msg = `HTTP ${response.status}`;

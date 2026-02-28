@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { formatPrice } from '../src/utils/currency';
@@ -18,6 +18,7 @@ export const SellerDashboard: React.FC = () => {
   const [scrapApiKey, setScrapApiKey] = useState('');
   const [scrapOutput, setScrapOutput] = useState('');
   const [scrapRunning, setScrapRunning] = useState(false);
+  const scrapAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (scrapModalOpen && !scrapApiKey) {
@@ -77,6 +78,7 @@ export const SellerDashboard: React.FC = () => {
       alert('Email requis');
       return;
     }
+    scrapAbortRef.current = new AbortController();
     setScrapRunning(true);
     setScrapOutput('');
     try {
@@ -87,13 +89,24 @@ export const SellerDashboard: React.FC = () => {
           password: scrapPassword,
           apiKey: scrapApiKey.trim() || undefined,
         },
-        (chunk) => setScrapOutput((prev) => prev + chunk)
+        (chunk) => setScrapOutput((prev) => prev + chunk),
+        scrapAbortRef.current.signal
       );
     } catch (err: any) {
-      setScrapOutput((prev) => prev + '\n[Erreur: ' + (err?.message || String(err)) + ']');
+      const msg = err?.message || String(err);
+      const isAbort = msg.includes('abort') || err?.name === 'AbortError';
+      setScrapOutput((prev) => prev + (isAbort ? '\n[Annulé]' : '\n[Erreur: ' + msg + ']'));
     } finally {
       setScrapRunning(false);
+      scrapAbortRef.current = null;
     }
+  };
+
+  const handleScrapCancel = () => {
+    if (scrapRunning && scrapAbortRef.current) {
+      scrapAbortRef.current.abort();
+    }
+    setScrapModalOpen(false);
   };
 
   return (
@@ -279,9 +292,8 @@ export const SellerDashboard: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900">Scraper</h3>
               <button
                 type="button"
-                onClick={() => !scrapRunning && setScrapModalOpen(false)}
-                disabled={scrapRunning}
-                className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                onClick={handleScrapCancel}
+                className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -334,11 +346,10 @@ export const SellerDashboard: React.FC = () => {
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => !scrapRunning && setScrapModalOpen(false)}
-                  disabled={scrapRunning}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+                  onClick={handleScrapCancel}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
                 >
-                  Annuler
+                  {scrapRunning ? 'Arrêter' : 'Annuler'}
                 </button>
                 <button
                   type="submit"

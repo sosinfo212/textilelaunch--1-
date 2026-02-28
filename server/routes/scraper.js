@@ -111,6 +111,18 @@ router.post('/run', authenticate, express.json(), async (req, res) => {
     }
   };
 
+  const killChild = () => {
+    if (child.killed) return;
+    try {
+      child.kill('SIGTERM');
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  res.on('close', () => killChild());
+  res.on('error', () => killChild());
+
   child.stdout.setEncoding('utf8');
   child.stderr.setEncoding('utf8');
   child.stdout.on('data', (data) => write(data));
