@@ -227,7 +227,7 @@ async def login(
     """
     logger.info("Navigating to login page: %s", login_url)
     try:
-        await page.goto(login_url, wait_until="domcontentloaded", timeout=timeout_ms)
+        await page.goto(login_url, wait_until="load", timeout=timeout_ms)
     except PlaywrightTimeout as e:
         logger.error("Timeout loading login page: %s", e)
         return False
@@ -243,12 +243,19 @@ async def login(
 
     await page.fill(SELECTORS["email"], email)
     await page.fill(SELECTORS["password"], password)
+    # Short delay so any client-side validation/JS can run before submit
+    await page.wait_for_timeout(500)
 
-    # Click submit and wait for navigation (either to dashboard or next page)
+    # Submit: handle both full navigation and SPA-style redirects
     try:
         async with page.expect_navigation(timeout=NAVIGATION_TIMEOUT_MS, wait_until="domcontentloaded"):
             await page.click(SELECTORS["submit"])
     except PlaywrightTimeout:
+        # SPA or slow redirect: wait a bit and re-check URL / DOM
+        await page.wait_for_timeout(3000)
+        if "login" not in page.url.strip("/").split("/")[-1]:
+            logger.info("Login completed (SPA/slow redirect)")
+            return True
         logger.error("Login submit did not trigger navigation within timeout")
         return False
 
@@ -567,11 +574,24 @@ async def main(
     logger.info("Using website: %s", config["base_url"])
     results: list[dict[str, Any]] = []
 
+    # Launch args for server/headless: avoid detection and run in constrained envs
+    launch_args = [
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--disable-setuid-sandbox",
+        "--disable-blink-features=AutomationControlled",
+    ]
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=headless)
+        browser = await p.chromium.launch(headless=headless, args=launch_args)
         context = await browser.new_context(
             viewport={"width": 1280, "height": 720},
             ignore_https_errors=True,
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+            locale="en-US",
         )
         context.set_default_timeout(timeout_ms)
         context.set_default_navigation_timeout(NAVIGATION_TIMEOUT_MS)
