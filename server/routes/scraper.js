@@ -83,16 +83,17 @@ router.post('/run', authenticate, express.json(), async (req, res) => {
     ...process.env,
     TEXTILELAUNCH_API_KEY: apiKey,
   };
-  // Scraper must reach this app's API. Production: use FRONTEND_URL or leave unset (Python uses its default).
-  // Dev: use localhost so it works without FRONTEND_URL.
+  // Scraper must reach this app's API. Production: use FRONTEND_URL (never localhost). Dev: use localhost.
   const isProduction = process.env.NODE_ENV === 'production';
-  if (process.env.FRONTEND_URL) {
-    env.TEXTILELAUNCH_API_URL = process.env.FRONTEND_URL.replace(/\/$/, '') + '/api';
+  const frontendUrl = (process.env.FRONTEND_URL || '').trim().replace(/\/$/, '');
+  const isLocalhost = /^https?:\/\/localhost(\b|$)/i.test(frontendUrl) || /^https?:\/\/127\.0\.0\.1(\b|$)/i.test(frontendUrl);
+  if (frontendUrl && (!isProduction || !isLocalhost)) {
+    env.TEXTILELAUNCH_API_URL = frontendUrl + '/api';
   } else if (!isProduction) {
     const port = process.env.PORT || 5001;
-    env.TEXTILELAUNCH_API_URL = `http://trendycosmetix.com:${port}/api`;
+    env.TEXTILELAUNCH_API_URL = `http://localhost:${port}/api`;
   }
-  // If production and no FRONTEND_URL, do not set; scraper.py will use DEFAULT_API_BASE_URL (e.g. https://trendycosmetix.com/api)
+  // Production with no FRONTEND_URL or localhost FRONTEND_URL: leave unset so scraper.py uses DEFAULT_API_BASE_URL
 
   const projectRoot = dirname(dirname(SCRAPER_PATH));
   const child = spawn(pythonCmd, args, {
