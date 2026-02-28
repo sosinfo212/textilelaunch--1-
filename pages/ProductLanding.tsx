@@ -72,6 +72,7 @@ export const ProductLanding: React.FC = () => {
   const [submitted, setSubmitted] = useState(false);
   const [formError, setFormError] = useState('');
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const galleryTouchStartX = useRef(0);
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'stripe'>('cod');
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
   const [stripePublishableKey, setStripePublishableKey] = useState<string>('');
@@ -576,7 +577,15 @@ export const ProductLanding: React.FC = () => {
           
           {/* Right Column: Gallery (In RTL this is visually Right) */}
           <div className="lg:col-span-7 flex flex-col gap-4">
-            <div className="w-full max-w-[600px] mx-auto relative rounded-2xl overflow-hidden shadow-lg border border-gray-100 bg-white">
+            <div
+              className="w-full max-w-[600px] mx-auto relative rounded-2xl overflow-hidden shadow-lg border border-gray-100 bg-white touch-pan-y"
+              onTouchStart={media.length > 1 ? (e) => { galleryTouchStartX.current = e.touches[0].clientX; } : undefined}
+              onTouchEnd={media.length > 1 ? (e) => {
+                const delta = e.changedTouches[0].clientX - galleryTouchStartX.current;
+                if (Math.abs(delta) < 50) return;
+                setCurrentMediaIndex((i) => delta > 0 ? Math.max(0, i - 1) : Math.min(media.length - 1, i + 1));
+              } : undefined}
+            >
                {/* Product Media (Image or Video) */}
                <div className="aspect-square">
                  {media[currentMediaIndex]?.type === 'video' ? (

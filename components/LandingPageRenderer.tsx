@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { PageElement, Product, ProductAttribute, LandingPageTemplate } from '../types';
 import { formatPrice } from '../src/utils/currency';
 import { ShoppingBag, ChevronLeft, ChevronRight, Truck, ShieldCheck, Star, Check, AlertCircle } from 'lucide-react';
@@ -27,6 +27,8 @@ interface RendererProps {
     };
 }
 
+const SWIPE_THRESHOLD = 50;
+
 export const LandingPageRenderer: React.FC<RendererProps> = ({ 
     elements = [], 
     templateMode = 'visual', 
@@ -34,6 +36,14 @@ export const LandingPageRenderer: React.FC<RendererProps> = ({
     product, 
     formState 
 }) => {
+    const galleryTouchStartX = useRef<number>(0);
+
+    const handleGallerySwipeEnd = useCallback((e: React.TouchEvent, prevImage: () => void, nextImage: () => void) => {
+        const delta = e.changedTouches[0].clientX - galleryTouchStartX.current;
+        if (Math.abs(delta) < SWIPE_THRESHOLD) return;
+        if (delta > 0) prevImage();
+        else nextImage();
+    }, []);
 
     // --- CODE MODE RENDERER ---
     if (templateMode === 'code') {
@@ -148,7 +158,11 @@ export const LandingPageRenderer: React.FC<RendererProps> = ({
                             const currentMedia = allMedia[formState.currentImageIndex] || allMedia[0];
                             
                             return (
-                              <div className="relative rounded-2xl overflow-hidden bg-gray-100 w-full h-full min-h-[300px] border border-gray-100 shadow-sm group">
+                              <div
+                                className="relative rounded-2xl overflow-hidden bg-gray-100 w-full h-full min-h-[300px] border border-gray-100 shadow-sm group touch-pan-y"
+                                onTouchStart={allMedia.length > 1 ? (e) => { galleryTouchStartX.current = e.touches[0].clientX; } : undefined}
+                                onTouchEnd={allMedia.length > 1 ? (e) => handleGallerySwipeEnd(e, formState.prevImage, formState.nextImage) : undefined}
+                              >
                                 {currentMedia?.type === 'video' ? (
                                   <div className="w-full h-full absolute inset-0">
                                     {currentMedia.src.includes('youtube.com') || currentMedia.src.includes('youtu.be') ? (
@@ -569,13 +583,31 @@ const CustomCodeRenderer: React.FC<{ htmlCode: string; product: Product; formSta
                 });
             };
 
+            let currentIndex = 0;
+            const setIndex = (index: number) => {
+                currentIndex = index;
+                updateMainMedia(index);
+                updateThumbnailState(index);
+            };
+
             // Bind thumbnail clicks
             thumbnails.forEach((thumb, index) => {
-                thumb.addEventListener('click', () => {
-                    updateMainMedia(index);
-                    updateThumbnailState(index);
-                });
+                thumb.addEventListener('click', () => setIndex(index));
             });
+
+            // Swipe left/right on main gallery area
+            let touchStartX = 0;
+            const galleryMain = gallery.querySelector('.tl-gallery-main') as HTMLElement;
+            if (galleryMain && total > 1) {
+                const onTouchStart = (e: TouchEvent) => { touchStartX = e.touches[0].clientX; };
+                const onTouchEnd = (e: TouchEvent) => {
+                    const delta = e.changedTouches[0].clientX - touchStartX;
+                    if (Math.abs(delta) < 50) return;
+                    setIndex(delta > 0 ? Math.max(0, currentIndex - 1) : Math.min(total - 1, currentIndex + 1));
+                };
+                galleryMain.addEventListener('touchstart', onTouchStart, { passive: true });
+                galleryMain.addEventListener('touchend', onTouchEnd, { passive: true });
+            }
 
             // Initialize with first media
             if (thumbnails.length > 0) {
