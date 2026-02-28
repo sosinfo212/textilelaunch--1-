@@ -1,15 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { formatPrice } from '../src/utils/currency';
 import { scraperAPI, settingsAPI } from '../src/utils/api';
-import { ExternalLink, Edit2, Tag, Box, Truck, Trash2, BarChart2, Plus, Scissors, X } from 'lucide-react';
+import { ExternalLink, Edit2, Tag, Box, Truck, Trash2, BarChart2, Plus, Scissors, X, RefreshCw, Filter } from 'lucide-react';
+import { Product } from '../types';
 
 export const SellerDashboard: React.FC = () => {
-  const { products, deleteProduct, deleteProducts } = useStore();
+  const { products, categories, deleteProduct, deleteProducts, refreshData, loading } = useStore();
   const navigate = useNavigate();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [filterName, setFilterName] = useState('');
+  const [filterPriceMin, setFilterPriceMin] = useState<string>('');
+  const [filterPriceMax, setFilterPriceMax] = useState<string>('');
+  const [filterSupplier, setFilterSupplier] = useState<string>('');
+  const [filterCategory, setFilterCategory] = useState<string>('');
 
   const [scrapModalOpen, setScrapModalOpen] = useState(false);
   const [scrapUrl, setScrapUrl] = useState('');
@@ -27,6 +35,32 @@ export const SellerDashboard: React.FC = () => {
       }).catch(() => {});
     }
   }, [scrapModalOpen, scrapApiKey]);
+
+  const uniqueSuppliers = useMemo(() => 
+    Array.from(new Set(products.map((p: Product) => p.supplier).filter(Boolean) as string[])).sort(),
+    [products]
+  );
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p: Product) => {
+      const nameMatch = !filterName.trim() || p.name.toLowerCase().includes(filterName.trim().toLowerCase());
+      const price = p.price ?? 0;
+      const minOk = filterPriceMin === '' || price >= Number(filterPriceMin);
+      const maxOk = filterPriceMax === '' || price <= Number(filterPriceMax);
+      const supplierMatch = !filterSupplier || (p.supplier || '') === filterSupplier;
+      const categoryMatch = !filterCategory || (p.category || '') === filterCategory;
+      return nameMatch && minOk && maxOk && supplierMatch && categoryMatch;
+    });
+  }, [products, filterName, filterPriceMin, filterPriceMax, filterSupplier, filterCategory]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshData();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleDeleteProduct = async (id: string, name: string) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${name}" ? Cette action est irréversible.`)) {
@@ -49,8 +83,12 @@ export const SellerDashboard: React.FC = () => {
   };
 
   const selectAll = () => {
-    if (selectedIds.size === products.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(products.map(p => p.id)));
+    const visibleIds = new Set(filteredProducts.map(p => p.id));
+    if (visibleIds.size > 0 && selectedIds.size === visibleIds.size && [...visibleIds].every(id => selectedIds.has(id))) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredProducts.map(p => p.id)));
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -110,13 +148,133 @@ export const SellerDashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex gap-6">
+      {/* Sidebar filters */}
+      <aside className={`flex-shrink-0 w-64 transition-all overflow-hidden ${sidebarOpen ? '' : 'w-0 opacity-0'}`}>
+        <div className="w-64 space-y-4 pr-4 border-r border-gray-200 min-h-0">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Filtres
+            </h2>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="p-1.5 text-gray-500 hover:text-gray-700 rounded lg:hidden"
+              aria-label="Fermer le filtre"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Nom</label>
+              <input
+                type="text"
+                value={filterName}
+                onChange={(e) => setFilterName(e.target.value)}
+                placeholder="Rechercher..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Prix min</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={filterPriceMin}
+                  onChange={(e) => setFilterPriceMin(e.target.value)}
+                  placeholder="Min"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Prix max</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={filterPriceMax}
+                  onChange={(e) => setFilterPriceMax(e.target.value)}
+                  placeholder="Max"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Fournisseur</label>
+              <select
+                value={filterSupplier}
+                onChange={(e) => setFilterSupplier(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              >
+                <option value="">Tous</option>
+                {uniqueSuppliers.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Catégorie</label>
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              >
+                <option value="">Toutes</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setFilterName('');
+                setFilterPriceMin('');
+                setFilterPriceMax('');
+                setFilterSupplier('');
+                setFilterCategory('');
+              }}
+              className="w-full py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+            >
+              Réinitialiser
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <div className="flex-1 min-w-0 space-y-6">
       <div className="flex justify-between items-end flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vos Produits</h1>
-          <p className="mt-1 text-sm text-gray-500">Gérez votre catalogue et accédez aux landing pages.</p>
+        <div className="flex items-center gap-2">
+          {!sidebarOpen && (
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+              title="Ouvrir les filtres"
+            >
+              <Filter className="h-4 w-4" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Vos Produits</h1>
+            <p className="mt-1 text-sm text-gray-500">Gérez votre catalogue et accédez aux landing pages.</p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing || loading}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+            title="Rafraîchir la liste"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Rafraîchir
+          </button>
           <button
             type="button"
             onClick={() => setScrapModalOpen(true)}
@@ -132,12 +290,12 @@ export const SellerDashboard: React.FC = () => {
             <Plus className="h-4 w-4" />
             Créer un produit
           </Link>
-        {products.length > 0 && (
+        {filteredProducts.length > 0 && (
           <>
             <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
               <input
                 type="checkbox"
-                checked={selectedIds.size === products.length && products.length > 0}
+                checked={filteredProducts.length > 0 && filteredProducts.every(p => selectedIds.has(p.id))}
                 onChange={selectAll}
                 className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
               />
@@ -171,9 +329,22 @@ export const SellerDashboard: React.FC = () => {
             </Link>
           </div>
         </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-lg border-2 border-dashed border-gray-200">
+          <Filter className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun résultat</h3>
+          <p className="mt-1 text-sm text-gray-500">Aucun produit ne correspond aux filtres. Modifiez ou réinitialisez les critères.</p>
+          <button
+            type="button"
+            onClick={() => { setFilterName(''); setFilterPriceMin(''); setFilterPriceMax(''); setFilterSupplier(''); setFilterCategory(''); }}
+            className="mt-4 px-4 py-2 text-sm font-medium text-brand-600 bg-brand-50 rounded-lg hover:bg-brand-100"
+          >
+            Réinitialiser les filtres
+          </button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => (
+          {filteredProducts.map((product) => (
             <div key={product.id} className="bg-white overflow-hidden shadow rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
               <div className="aspect-w-16 aspect-h-9 bg-gray-200 h-48 overflow-hidden relative">
                 <div className="absolute top-2 left-2 z-10">
@@ -283,6 +454,7 @@ export const SellerDashboard: React.FC = () => {
           ))}
         </div>
       )}
+      </div>
 
       {/* Scrap modal */}
       {scrapModalOpen && (

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Product, Order, LandingPageTemplate, AppSettings } from '../types';
 import { useAuth } from './AuthContext';
 import { productsAPI, ordersAPI, templatesAPI, settingsAPI } from '../src/utils/api';
@@ -38,6 +38,8 @@ interface StoreContextType {
   updateSettings: (newSettings: AppSettings) => Promise<void>;
   getSettingsForUser: (userId: string) => AppSettings | undefined;
   refreshSettings: () => Promise<void>;
+  /** Reload products, orders, templates from API */
+  refreshData: () => Promise<void>;
   // Loading states
   loading: boolean;
 }
@@ -142,6 +144,45 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
 
     loadData();
+  }, [user]);
+
+  const refreshData = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const productsRes = await productsAPI.getAll();
+      const userProducts = productsRes.products.filter((p: Product) => p.ownerId === user.id);
+      setProducts(userProducts);
+      setAllProducts(productsRes.products);
+      const ordersRes = await ordersAPI.getAll();
+      setOrders(ordersRes.orders);
+      setAllOrders(ordersRes.orders);
+      const templatesRes = await templatesAPI.getAll();
+      setTemplates(templatesRes.templates);
+      setAllTemplates(templatesRes.templates);
+      const uniqueCats = Array.from(
+        new Set(userProducts.map((p: Product) => p.category).filter(Boolean) as string[])
+      );
+      setCategories(uniqueCats);
+      const settingsRes = await settingsAPI.get();
+      const userSettings = {
+        ...DEFAULT_SETTINGS,
+        ...settingsRes.settings,
+        userId: user.id
+      };
+      setSettings(userSettings);
+      setAllSettings((prev) => ({ ...prev, [user.id]: userSettings }));
+    } catch (error: any) {
+      console.error('Error refreshing data:', error);
+      const errorMessage = error?.message || '';
+      if (errorMessage.includes('401') || errorMessage.includes('Authentication')) {
+        window.location.href = '/#/login';
+        return;
+      }
+      alert('Erreur lors du rafraîchissement des données.');
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
   // --- ACTIONS ---
@@ -457,7 +498,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       addProduct, updateProduct, deleteProduct, deleteProducts, addOrder, getProduct, updateOrderStatus, markOrderAsViewed, deleteOrder,
       addCategory,
       addTemplate, updateTemplate, deleteTemplate, getTemplate,
-      updateSettings, getSettingsForUser, refreshSettings
+      updateSettings, getSettingsForUser, refreshSettings, refreshData
     }}>
       {children}
     </StoreContext.Provider>
