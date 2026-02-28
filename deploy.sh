@@ -98,6 +98,12 @@ chown -R ${APP_USER}:${APP_USER} ${DEPLOY_PATH}
 cd ${DEPLOY_PATH}
 sudo -u ${APP_USER} npm install
 
+# Install scrapper Python deps and Playwright Chromium (for scraper feature)
+if [ -f "${DEPLOY_PATH}/scrapper/requirements.txt" ]; then
+    sudo -u ${APP_USER} pip3 install --user -r "${DEPLOY_PATH}/scrapper/requirements.txt"
+    sudo -u ${APP_USER} python3 -m playwright install chromium
+fi
+
 # Build frontend
 sudo -u ${APP_USER} npm run build
 
