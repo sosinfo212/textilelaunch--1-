@@ -11,25 +11,110 @@ import {
   ChevronLeft,
   Calendar,
   Store,
+  ChevronDown,
 } from 'lucide-react';
+
+const DATE_RANGE_OPTIONS = [
+  { key: 'today', label: "Aujourd'hui" },
+  { key: 'yesterday', label: 'Hier' },
+  { key: '7', label: '7 derniers jours' },
+  { key: '30', label: '30 derniers jours' },
+  { key: 'this_month', label: 'Ce mois' },
+  { key: 'last_month', label: 'Mois dernier' },
+  { key: 'this_year', label: 'Cette année' },
+  { key: 'last_year', label: 'Année dernière' },
+] as const;
+type DateRangeKey = (typeof DATE_RANGE_OPTIONS)[number]['key'];
+
+function getRangeStart(key: DateRangeKey): number {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  switch (key) {
+    case 'today':
+      return today;
+    case 'yesterday': {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 1);
+      return d.getTime();
+    }
+    case '7': {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 7);
+      return d.getTime();
+    }
+    case '30': {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 30);
+      return d.getTime();
+    }
+    case 'this_month':
+      return new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    case 'last_month':
+      return new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+    case 'this_year':
+      return new Date(now.getFullYear(), 0, 1).getTime();
+    case 'last_year':
+      return new Date(now.getFullYear() - 1, 0, 1).getTime();
+    default: {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 30);
+      return d.getTime();
+    }
+  }
+}
+
+function getRangeEnd(key: DateRangeKey): number | null {
+  const now = new Date();
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+  switch (key) {
+    case 'today':
+      return todayEnd;
+    case 'yesterday': {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
+    }
+    case 'last_month': {
+      const end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      return end.getTime();
+    }
+    case 'last_year':
+      return new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999).getTime();
+    default:
+      return null;
+  }
+}
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const { orders, products, templates } = useStore();
-  const [dateRange] = useState('30 derniers jours');
+  const [dateRangeKey, setDateRangeKey] = useState<DateRangeKey>('30');
+  const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
   const [conversionFilter] = useState('Mensuel');
   const [salesFilter, setSalesFilter] = useState<'Privé' | 'Affilié'>('Privé');
 
-  const totalOrders = orders.length;
-  const totalSales = useMemo(() => orders.reduce((sum, o) => sum + o.productPrice, 0), [orders]);
+  const rangeStart = useMemo(() => getRangeStart(dateRangeKey), [dateRangeKey]);
+  const rangeEnd = useMemo(() => getRangeEnd(dateRangeKey), [dateRangeKey]);
+
+  const filteredOrders = useMemo(() => {
+    if (rangeEnd != null) {
+      return orders.filter((o) => o.createdAt >= rangeStart && o.createdAt <= rangeEnd);
+    }
+    return orders.filter((o) => o.createdAt >= rangeStart);
+  }, [orders, rangeStart, rangeEnd]);
+
+  const totalOrders = filteredOrders.length;
+  const totalSales = useMemo(
+    () => filteredOrders.reduce((sum, o) => sum + o.productPrice, 0),
+    [filteredOrders]
+  );
   const lastThreeOrders = useMemo(
-    () => [...orders].sort((a, b) => b.createdAt - a.createdAt).slice(0, 3),
-    [orders]
+    () => [...filteredOrders].sort((a, b) => b.createdAt - a.createdAt).slice(0, 3),
+    [filteredOrders]
   );
 
   const bestSelling = useMemo(() => {
     const byProduct: Record<string, { name: string; price: number; count: number; total: number }> = {};
-    orders.forEach((o) => {
+    filteredOrders.forEach((o) => {
       const key = o.productId;
       if (!byProduct[key]) {
         byProduct[key] = { name: o.productName, price: o.productPrice, count: 0, total: 0 };
@@ -38,7 +123,7 @@ export const DashboardPage: React.FC = () => {
       byProduct[key].total += o.productPrice;
     });
     return Object.values(byProduct).sort((a, b) => b.count - a.count).slice(0, 5);
-  }, [orders]);
+  }, [filteredOrders]);
 
   const privateLandingCount = templates.length;
   const affiliateLandingCount = 0;
@@ -46,6 +131,26 @@ export const DashboardPage: React.FC = () => {
   const conversionPurchased = totalOrders;
   const conversionVisits = 0;
   const conversionRate = conversionVisits > 0 ? (conversionPurchased / conversionVisits) * 100 : 0;
+
+  const dateRangeLabel = DATE_RANGE_OPTIONS.find((o) => o.key === dateRangeKey)?.label ?? '30 derniers jours';
+
+  const salesByMonth = useMemo(() => {
+    const spanMs = (rangeEnd ?? Date.now()) - rangeStart;
+    const days = Math.ceil(spanMs / (24 * 60 * 60 * 1000));
+    const numBars = days <= 7 ? 7 : days <= 31 ? 10 : 12;
+    const bucketMs = spanMs / numBars;
+    const buckets = new Array(numBars).fill(0);
+    filteredOrders.forEach((o) => {
+      const idx = Math.min(
+        numBars - 1,
+        Math.max(0, Math.floor((o.createdAt - rangeStart) / bucketMs))
+      );
+      if (Number.isNaN(idx)) return;
+      buckets[idx] += o.productPrice;
+    });
+    const max = Math.max(1, ...buckets);
+    return buckets.map((v) => (v / max) * 100);
+  }, [filteredOrders, dateRangeKey, rangeStart, rangeEnd]);
 
   const statusLabel = (status: string) =>
     status === 'pending' ? 'En attente' : status === 'shipped' ? 'Expédié' : 'Terminé';
@@ -62,13 +167,41 @@ export const DashboardPage: React.FC = () => {
             Bon retour - Voici ce qui se passe dans votre compte.
           </p>
         </div>
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 text-white text-sm font-medium hover:bg-gray-700"
-        >
-          <Calendar className="h-4 w-4" />
-          {dateRange}
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setDateDropdownOpen((o) => !o)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border-2 border-brand-500 text-gray-900 text-sm font-medium hover:bg-gray-50"
+          >
+            <Calendar className="h-4 w-4 text-gray-600" />
+            {dateRangeLabel}
+            <ChevronDown className="h-4 w-4 text-gray-600" />
+          </button>
+          {dateDropdownOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                aria-hidden
+                onClick={() => setDateDropdownOpen(false)}
+              />
+              <div className="absolute right-0 mt-1 z-20 w-52 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                {DATE_RANGE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => {
+                      setDateRangeKey(opt.key);
+                      setDateDropdownOpen(false);
+                    }}
+                    className={`block w-full text-left px-4 py-2.5 text-sm ${dateRangeKey === opt.key ? 'bg-brand-50 text-brand-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* KPI Cards Row 1 */}
@@ -130,13 +263,18 @@ export const DashboardPage: React.FC = () => {
             </button>
           </div>
           <div className="mt-3 h-12 flex items-end gap-0.5">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-t bg-gray-200 min-h-[4px]"
-                style={{ height: `${Math.max(10, 30 - i * 2)}%` }}
-              />
-            ))}
+            {salesByMonth.length === 0 ? (
+              <div className="flex-1 rounded-t bg-gray-100 min-h-[4px]" />
+            ) : (
+              salesByMonth.map((pct, i) => (
+                <div
+                  key={i}
+                  className="flex-1 rounded-t bg-orange-400 min-h-[4px]"
+                  style={{ height: `${Math.max(8, pct)}%` }}
+                  title={`${pct.toFixed(0)}%`}
+                />
+              ))
+            )}
           </div>
         </div>
 
