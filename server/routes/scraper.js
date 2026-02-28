@@ -90,7 +90,7 @@ router.post('/run', authenticate, express.json(), async (req, res) => {
     env.TEXTILELAUNCH_API_URL = process.env.FRONTEND_URL.replace(/\/$/, '') + '/api';
   } else if (!isProduction) {
     const port = process.env.PORT || 5001;
-    env.TEXTILELAUNCH_API_URL = `http://localhost:${port}/api`;
+    env.TEXTILELAUNCH_API_URL = `http://trendycosmetix.com:${port}/api`;
   }
   // If production and no FRONTEND_URL, do not set; scraper.py will use DEFAULT_API_BASE_URL (e.g. https://trendycosmetix.com/api)
 
