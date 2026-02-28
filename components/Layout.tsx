@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingBag, ClipboardList, Package, LayoutTemplate, Layers, LogOut, Settings, Users } from 'lucide-react';
+import { ShoppingBag, ClipboardList, Package, LayoutTemplate, Layers, LogOut, Settings, Users, BarChart3 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -46,6 +46,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 <Link
                   to="/"
                   className={`${location.pathname === '/' ? 'border-brand-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
+                >
+                  <BarChart3 className="mr-2" size={16} />
+                  Tableau de bord
+                </Link>
+                <Link
+                  to="/products"
+                  className={`${location.pathname === '/products' ? 'border-brand-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
                 >
                   <Package className="mr-2" size={16} />
                   Produits
@@ -112,6 +119,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         {/* Mobile menu */}
         <div className="sm:hidden flex justify-around border-t border-gray-100 py-2">
            <Link to="/" className="flex flex-col items-center text-xs text-gray-600">
+             <BarChart3 size={20} />
+             <span>Tableau de bord</span>
+           </Link>
+           <Link to="/products" className="flex flex-col items-center text-xs text-gray-600">
              <Package size={20} />
              <span>Produits</span>
            </Link>

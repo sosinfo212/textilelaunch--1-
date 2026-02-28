@@ -17,6 +17,7 @@ import { ProductAnalyticsPage } from './pages/ProductAnalyticsPage';
 import { AffiliateIntegrationsPage } from './pages/AffiliateIntegrationsPage';
 import { AffiliateConnectBridge } from './pages/AffiliateConnectBridge';
 import { ClientList } from './pages/ClientList';
+import { DashboardPage } from './pages/DashboardPage';
 
 // Lazy-load landing page so product/:id only loads this chunk (reduces initial JS)
 const ProductLanding = lazy(() => import('./pages/ProductLanding').then(m => ({ default: m.ProductLanding })));
@@ -51,7 +52,8 @@ function App() {
               <Route path="/product/:productId" element={<ProductLanding />} />
 
               {/* Protected Routes */}
-              <Route path="/" element={<RequireAuth><SellerDashboard /></RequireAuth>} />
+              <Route path="/" element={<RequireAuth><DashboardPage /></RequireAuth>} />
+              <Route path="/products" element={<RequireAuth><SellerDashboard /></RequireAuth>} />
               <Route path="/add-product" element={<RequireAuth><AddProduct /></RequireAuth>} />
               <Route path="/edit-product/:productId" element={<RequireAuth><EditProduct /></RequireAuth>} />
               <Route path="/product/:productId/analytics" element={<RequireAuth><ProductAnalyticsPage /></RequireAuth>} />
