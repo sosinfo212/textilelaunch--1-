@@ -1,14 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { formatPrice } from '../src/utils/currency';
-import { ExternalLink, Edit2, Tag, Box, Truck, Trash2, BarChart2, Plus } from 'lucide-react';
+import { scraperAPI, settingsAPI } from '../src/utils/api';
+import { ExternalLink, Edit2, Tag, Box, Truck, Trash2, BarChart2, Plus, Scissors, X } from 'lucide-react';
 
 export const SellerDashboard: React.FC = () => {
   const { products, deleteProduct, deleteProducts } = useStore();
   const navigate = useNavigate();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const [scrapModalOpen, setScrapModalOpen] = useState(false);
+  const [scrapUrl, setScrapUrl] = useState('');
+  const [scrapEmail, setScrapEmail] = useState('');
+  const [scrapPassword, setScrapPassword] = useState('');
+  const [scrapApiKey, setScrapApiKey] = useState('');
+  const [scrapOutput, setScrapOutput] = useState('');
+  const [scrapRunning, setScrapRunning] = useState(false);
+
+  useEffect(() => {
+    if (scrapModalOpen && !scrapApiKey) {
+      settingsAPI.getApiKey().then((r) => {
+        if (r.apiKey) setScrapApiKey(r.apiKey);
+      }).catch(() => {});
+    }
+  }, [scrapModalOpen, scrapApiKey]);
 
   const handleDeleteProduct = async (id: string, name: string) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${name}" ? Cette action est irréversible.`)) {
@@ -50,6 +67,35 @@ export const SellerDashboard: React.FC = () => {
     }
   };
 
+  const handleScrapSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!scrapUrl.trim()) {
+      alert('URL requise');
+      return;
+    }
+    if (!scrapEmail.trim()) {
+      alert('Email requis');
+      return;
+    }
+    setScrapRunning(true);
+    setScrapOutput('');
+    try {
+      await scraperAPI.run(
+        {
+          url: scrapUrl.trim(),
+          email: scrapEmail.trim(),
+          password: scrapPassword,
+          apiKey: scrapApiKey.trim() || undefined,
+        },
+        (chunk) => setScrapOutput((prev) => prev + chunk)
+      );
+    } catch (err: any) {
+      setScrapOutput((prev) => prev + '\n[Erreur: ' + (err?.message || String(err)) + ']');
+    } finally {
+      setScrapRunning(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-end flex-wrap gap-3">
@@ -58,6 +104,14 @@ export const SellerDashboard: React.FC = () => {
           <p className="mt-1 text-sm text-gray-500">Gérez votre catalogue et accédez aux landing pages.</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setScrapModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <Scissors className="h-4 w-4" />
+            Scrap
+          </button>
           <Link
             to="/add-product"
             className="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
@@ -214,6 +268,94 @@ export const SellerDashboard: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Scrap modal */}
+      {scrapModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Scraper</h3>
+              <button
+                type="button"
+                onClick={() => !scrapRunning && setScrapModalOpen(false)}
+                disabled={scrapRunning}
+                className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleScrapSubmit} className="px-6 py-4 space-y-4 border-b border-gray-100">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
+                <input
+                  type="url"
+                  value={scrapUrl}
+                  onChange={(e) => setScrapUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={scrapEmail}
+                    onChange={(e) => setScrapEmail(e.target.value)}
+                    placeholder="email@example.com"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+                  <input
+                    type="password"
+                    value={scrapPassword}
+                    onChange={(e) => setScrapPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">API (clé sauvegardée si vide)</label>
+                <input
+                  type="password"
+                  value={scrapApiKey}
+                  onChange={(e) => setScrapApiKey(e.target.value)}
+                  placeholder="Chargée depuis Paramètres si disponible"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 font-mono text-sm"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => !scrapRunning && setScrapModalOpen(false)}
+                  disabled={scrapRunning}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={scrapRunning}
+                  className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50"
+                >
+                  {scrapRunning ? 'En cours…' : 'Lancer'}
+                </button>
+              </div>
+            </form>
+            <div className="flex-1 min-h-0 px-6 py-4 flex flex-col">
+              <p className="text-sm font-medium text-gray-700 mb-2">Sortie du script</p>
+              <pre className="flex-1 min-h-[200px] p-4 bg-gray-900 text-gray-100 text-xs rounded-lg overflow-auto whitespace-pre-wrap font-mono">
+                {scrapOutput || (scrapRunning ? 'Démarrage…' : '—')}
+              </pre>
+            </div>
+          </div>
         </div>
       )}
     </div>

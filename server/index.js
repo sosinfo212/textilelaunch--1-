@@ -14,6 +14,7 @@ import analyticsRoutes from './routes/analytics.js';
 import trackingRoutes from './routes/tracking.js';
 import integrationsRoutes from './routes/integrations.js';
 import stripeRoutes, { stripeWebhookHandler } from './routes/stripe.js';
+import scraperRoutes from './routes/scraper.js';
 import { setupSwagger } from './swagger.js';
 
 // Load .env file - specify path explicitly
@@ -170,6 +171,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/tracking', trackingRoutes);
 app.use('/api/integrations', integrationsRoutes);
 app.use('/api/stripe', stripeRoutes);
+app.use('/api/scraper', scraperRoutes);
 
 // Swagger API documentation
 setupSwagger(app);

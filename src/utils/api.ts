@@ -423,6 +423,45 @@ export const integrationsAPI = {
   },
 };
 
+// Scraper (run Python scraper, stream output)
+export const scraperAPI = {
+  run: async (
+    body: { url: string; email: string; password: string; apiKey?: string },
+    onChunk: (text: string) => void
+  ): Promise<void> => {
+    const url = `${API_BASE_URL}/scraper/run`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      let msg = `HTTP ${response.status}`;
+      try {
+        const data = await response.json();
+        if (data.error) msg = data.error;
+      } catch {
+        const text = await response.text();
+        if (text) msg = text;
+      }
+      throw new Error(msg);
+    }
+    const reader = response.body?.getReader();
+    if (!reader) return;
+    const decoder = new TextDecoder();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        onChunk(decoder.decode(value, { stream: true }));
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  },
+};
+
 // Stripe (public - for landing page payment)
 export const stripeAPI = {
   createPaymentIntent: async (body: {
