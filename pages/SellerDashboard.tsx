@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { formatPrice } from '../src/utils/currency';
-import { ExternalLink, Edit2, Tag, Box, Truck, Trash2, BarChart2 } from 'lucide-react';
+import { ExternalLink, Edit2, Tag, Box, Truck, Trash2, BarChart2, Plus } from 'lucide-react';
 
 export const SellerDashboard: React.FC = () => {
   const { products, deleteProduct, deleteProducts } = useStore();
@@ -57,8 +57,16 @@ export const SellerDashboard: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Vos Produits</h1>
           <p className="mt-1 text-sm text-gray-500">Gérez votre catalogue et accédez aux landing pages.</p>
         </div>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/add-product"
+            className="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
+          >
+            <Plus className="h-4 w-4" />
+            Créer un produit
+          </Link>
         {products.length > 0 && (
-          <div className="flex items-center gap-3">
+          <>
             <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
               <input
                 type="checkbox"
@@ -77,8 +85,9 @@ export const SellerDashboard: React.FC = () => {
               <Trash2 className="h-4 w-4" />
               {bulkDeleting ? 'Suppression...' : `Supprimer (${selectedIds.size})`}
             </button>
-          </div>
+          </>
         )}
+        </div>
       </div>
 
       {products.length === 0 ? (
