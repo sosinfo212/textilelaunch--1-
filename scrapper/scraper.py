@@ -71,7 +71,7 @@ NAVIGATION_TIMEOUT_MS = 60_000
 TEXTILELAUNCH_API_URL_ENV = "https://pyjamachamal.com"
 TEXTILELAUNCH_API_KEY_ENV = "TEXTILELAUNCH_API_KEY"
 DEFAULT_API_BASE_URL = "https://trendycosmetix.com/api"
-DEFAULT_API_KEY = "tl_f817581179238784f44fc0d424c7188da7491ff9187e9f1fd9ef037fae8d6eb9"
+DEFAULT_API_KEY = "tl_5328bacad94d457ebe3f3936ffe081146a39dfebbf1a54c1fe3567d36e1a030d"
 
 # ---------------------------------------------------------------------------
 # Transform to TextileLaunch API format & API sync
