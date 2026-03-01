@@ -82,7 +82,7 @@ app.use(cors({
   origin: corsOrigin,
   credentials: true, // CRITICAL: Required to allow cookies in CORS requests
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
   exposedHeaders: ['Set-Cookie']
 }));
 // Stripe webhook needs raw body (must be before express.json())
