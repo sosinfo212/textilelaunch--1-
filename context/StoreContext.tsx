@@ -236,6 +236,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         description: product.description || '',
         price: product.price,
         regularPrice: product.regularPrice,
+        cost: product.cost,
         currency: product.currency || 'MAD',
         sku: product.sku,
         showSku: product.showSku || false,
