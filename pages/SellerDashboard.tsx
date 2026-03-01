@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { formatPrice } from '../src/utils/currency';
-import { scraperAPI, settingsAPI } from '../src/utils/api';
+import { scraperAPI, settingsAPI, integrationsAPI } from '../src/utils/api';
 import { Eye, Edit2, Tag, Box, Truck, Trash2, BarChart2, Plus, Scissors, X, RefreshCw, Filter } from 'lucide-react';
 import { Product } from '../types';
 
@@ -31,15 +31,44 @@ export const SellerDashboard: React.FC = () => {
   const [scrapApiKey, setScrapApiKey] = useState('');
   const [scrapOutput, setScrapOutput] = useState('');
   const [scrapRunning, setScrapRunning] = useState(false);
+  const [affiliateConnections, setAffiliateConnections] = useState<{ id: string; name: string; loginUrl: string }[]>([]);
+  const [scrapSelectedConnectionId, setScrapSelectedConnectionId] = useState<string>('');
   const scrapAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (scrapModalOpen && !scrapApiKey) {
-      settingsAPI.getApiKey().then((r) => {
-        if (r.apiKey) setScrapApiKey(r.apiKey);
-      }).catch(() => {});
+    if (scrapModalOpen) {
+      if (!scrapApiKey) {
+        settingsAPI.getApiKey().then((r) => {
+          if (r.apiKey) setScrapApiKey(r.apiKey);
+        }).catch(() => {});
+      }
+      integrationsAPI.getAffiliateConnections().then((r) => {
+        setAffiliateConnections(r.connections || []);
+      }).catch(() => setAffiliateConnections([]));
     }
   }, [scrapModalOpen, scrapApiKey]);
+
+  const handleScrapSelectAffiliate = async (connectionId: string) => {
+    setScrapSelectedConnectionId(connectionId);
+    if (!connectionId) return;
+    try {
+      const creds = await integrationsAPI.getAffiliateConnectionCredentials(connectionId);
+      let baseUrl = creds.loginUrl || '';
+      try {
+        const u = new URL(baseUrl);
+        baseUrl = u.origin;
+      } catch {
+        baseUrl = baseUrl.replace(/\/login\/?$/, '') || baseUrl;
+      }
+      setScrapUrl(baseUrl);
+      setScrapEmail(creds.email || '');
+      setScrapPassword(creds.password || '');
+    } catch {
+      setScrapUrl('');
+      setScrapEmail('');
+      setScrapPassword('');
+    }
+  };
 
   const uniqueSuppliers = useMemo(() => 
     Array.from(new Set(products.map((p: Product) => p.supplier).filter(Boolean) as string[])).sort(),
@@ -617,6 +646,20 @@ export const SellerDashboard: React.FC = () => {
               </button>
             </div>
             <form onSubmit={handleScrapSubmit} className="px-6 py-4 space-y-4 border-b border-gray-100">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Connexion affiliée</label>
+                <select
+                  value={scrapSelectedConnectionId}
+                  onChange={(e) => handleScrapSelectAffiliate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                >
+                  <option value="">— Choisir une connexion —</option>
+                  {affiliateConnections.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">Remplit URL, email et mot de passe automatiquement.</p>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
                 <input

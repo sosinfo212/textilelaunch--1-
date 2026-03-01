@@ -70,6 +70,28 @@ router.post('/affiliate', authenticate, async (req, res) => {
   }
 });
 
+// Get one connection's credentials (for scraper autofill); decrypt and return
+router.get('/affiliate/:id/credentials', authenticate, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
+    const [rows] = await db.execute(
+      'SELECT login_url, email_encrypted, password_encrypted FROM affiliate_connections WHERE id = ? AND user_id = ?',
+      [id, userId]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ error: 'Connection not found' });
+    }
+    const r = rows[0];
+    const email = decrypt(r.email_encrypted);
+    const password = decrypt(r.password_encrypted);
+    res.json({ loginUrl: r.login_url, email, password });
+  } catch (err) {
+    console.error('Get affiliate credentials error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Delete affiliate connection
 router.delete('/affiliate/:id', authenticate, async (req, res) => {
   try {

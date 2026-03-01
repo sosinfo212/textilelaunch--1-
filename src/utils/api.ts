@@ -389,6 +389,9 @@ export const integrationsAPI = {
   getAffiliateConnections: async () => {
     return apiRequest<{ connections: { id: string; name: string; loginUrl: string; createdAt: string }[] }>('/integrations/affiliate');
   },
+  getAffiliateConnectionCredentials: async (id: string) => {
+    return apiRequest<{ loginUrl: string; email: string; password: string }>(`/integrations/affiliate/${encodeURIComponent(id)}/credentials`);
+  },
   saveAffiliateConnection: async (data: { id?: string; name: string; loginUrl: string; email: string; password: string }) => {
     return apiRequest<{ connection: { id: string; name: string; loginUrl: string; createdAt: string } }>('/integrations/affiliate', {
       method: 'POST',
