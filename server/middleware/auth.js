@@ -56,8 +56,11 @@ export const authenticate = async (req, res, next) => {
             return next();
           }
         }
+        // API key was provided but not found or user missing — do not fall through to JWT
+        return res.status(401).json({ error: 'Invalid or expired API key. Regenerate in Settings → API.' });
       } catch (e) {
         if (e.code !== 'ER_BAD_FIELD_ERROR') throw e;
+        return res.status(401).json({ error: 'Invalid or expired API key. Regenerate in Settings → API.' });
       }
     }
 
