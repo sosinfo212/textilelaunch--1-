@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image, ExternalLink, Copy, Check, Eye, RefreshCw, Store, CreditCard, Activity, Link2 } from 'lucide-react';
+import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image, ExternalLink, Copy, Check, Eye, RefreshCw, Store, CreditCard, Activity, Link2, ScrollText } from 'lucide-react';
 import { User as UserType } from '../types';
 import { getApiDocsUrl } from '../src/utils/api';
+import { getLogs, clearLogs, subscribe, LogEntry } from '../src/utils/logStore';
 
 export const SettingsPage: React.FC = () => {
     const { settings, updateSettings, refreshSettings } = useStore();
     const { user, users, addUser, updateUser, deleteUser } = useAuth();
-    type SettingsSection = 'boutique' | 'paiement' | 'tracking' | 'api' | 'integrations' | 'users';
+    type SettingsSection = 'boutique' | 'paiement' | 'tracking' | 'api' | 'integrations' | 'users' | 'log';
     const [activeSection, setActiveSection] = useState<SettingsSection>('boutique');
+    const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
+    const logEndRef = useRef<HTMLDivElement>(null);
 
     // API key (shown once after generate; view modal for stored key)
     const [newApiKey, setNewApiKey] = useState<string | null>(null);
@@ -106,12 +109,22 @@ export const SettingsPage: React.FC = () => {
         }
     };
 
+    useEffect(() => {
+        setLogEntries(getLogs());
+        return subscribe(() => setLogEntries(getLogs()));
+    }, []);
+
+    useEffect(() => {
+        if (activeSection === 'log') logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [activeSection, logEntries]);
+
     const sidebarSections: { id: SettingsSection; label: string; icon: React.ReactNode }[] = [
         { id: 'boutique', label: 'Boutique', icon: <Store size={18} /> },
         { id: 'paiement', label: 'Paiement', icon: <CreditCard size={18} /> },
         { id: 'tracking', label: 'Tracking', icon: <Activity size={18} /> },
         { id: 'api', label: 'Clés API', icon: <Key size={18} /> },
         { id: 'integrations', label: 'Intégrations', icon: <Link2 size={18} /> },
+        { id: 'log', label: 'Log', icon: <ScrollText size={18} /> },
         ...(user?.role === 'admin' ? [{ id: 'users' as const, label: 'Utilisateurs', icon: <User size={18} /> }] : []),
     ];
 
@@ -488,6 +501,59 @@ export const SettingsPage: React.FC = () => {
                                 </section>
                             )}
                         </form>
+
+                        {activeSection === 'log' && (
+                            <div className="space-y-4">
+                                <section>
+                                    <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                                        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                            <ScrollText size={20} className="text-gray-500" />
+                                            Log des appels API
+                                        </h2>
+                                        <button
+                                            type="button"
+                                            onClick={() => { clearLogs(); setLogEntries([]); }}
+                                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200"
+                                        >
+                                            <Trash2 size={16} />
+                                            Vider le log
+                                        </button>
+                                    </div>
+                                    <p className="text-sm text-gray-500 mb-4">
+                                        Requêtes, réponses et erreurs API (session en cours, max 500 entrées).
+                                    </p>
+                                    <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
+                                        <div className="max-h-[60vh] overflow-y-auto p-3 font-mono text-xs">
+                                            {logEntries.length === 0 ? (
+                                                <p className="text-gray-500 py-4 text-center">Aucune entrée. Les appels API apparaîtront ici.</p>
+                                            ) : (
+                                                <div className="space-y-1">
+                                                    {logEntries.map((entry) => (
+                                                        <div
+                                                            key={entry.id}
+                                                            className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 py-1.5 px-2 rounded ${
+                                                                entry.level === 'error' ? 'bg-red-50 text-red-800' :
+                                                                entry.level === 'response' ? 'bg-green-50/80 text-green-800' :
+                                                                entry.level === 'request' ? 'bg-blue-50/80 text-blue-800' : 'bg-gray-100 text-gray-700'
+                                                            }`}
+                                                        >
+                                                            <span className="text-gray-500 shrink-0">{new Date(entry.time).toLocaleTimeString('fr-FR')}</span>
+                                                            <span className="font-semibold shrink-0 uppercase">{entry.level}</span>
+                                                            {entry.method && <span className="shrink-0">{entry.method}</span>}
+                                                            {entry.url && <span className="truncate min-w-0" title={entry.url}>{entry.url.replace(/^.*\/api/, '/api')}</span>}
+                                                            {entry.status != null && <span className="shrink-0">→ {entry.status}</span>}
+                                                            <span className="min-w-0 break-words">{entry.message}</span>
+                                                            {entry.details && <pre className="w-full mt-1 text-[10px] opacity-80 overflow-x-auto whitespace-pre-wrap">{entry.details}</pre>}
+                                                        </div>
+                                                    ))}
+                                                    <div ref={logEndRef} />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+                        )}
 
                         {activeSection === 'users' && user?.role === 'admin' && (
                         <div className="space-y-6">

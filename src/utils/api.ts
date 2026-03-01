@@ -1,4 +1,5 @@
 // API utility functions for making HTTP requests
+import { addLog } from './logStore';
 
 // Use relative URL when Vite proxy is configured, otherwise use full URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -31,39 +32,69 @@ export const apiRequest = async <T>(
   options: RequestInit = {}
 ): Promise<T> => {
   const url = `${API_BASE_URL}${endpoint}`;
-  
+  const method = (options.method || 'GET').toUpperCase();
+
+  addLog({ level: 'request', method, url, message: `${method} ${endpoint}` });
+
   // For login, don't include auth headers
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
-  
+
   // Only add auth header if not logging in
   if (!endpoint.includes('/auth/login')) {
     const authHeaders = getAuthHeaders();
     Object.assign(headers, authHeaders);
   }
-  
-  // Include credentials for cookies
-  const response = await fetch(url, {
-    ...options,
-    headers,
-    credentials: 'include', // Important for cookies
-  });
 
-  if (!response.ok) {
-    let errorMessage = `HTTP error! status: ${response.status}`;
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.error || errorMessage;
-    } catch {
-      // If response is not JSON, use status text
-      errorMessage = response.statusText || errorMessage;
+  try {
+    // Include credentials for cookies
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'include', // Important for cookies
+    });
+
+    if (!response.ok) {
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch {
+        errorMessage = response.statusText || errorMessage;
+      }
+      addLog({
+        level: 'error',
+        method,
+        url,
+        status: response.status,
+        message: errorMessage,
+      });
+      throw new Error(errorMessage);
     }
-    throw new Error(errorMessage);
-  }
 
-  return response.json();
+    addLog({
+      level: 'response',
+      method,
+      url,
+      status: response.status,
+      message: `${response.status} ${endpoint}`,
+    });
+    return response.json();
+  } catch (err: any) {
+    const msg = err?.message || String(err);
+    if (err?.message && !msg.includes('HTTP error')) {
+      addLog({
+        level: 'error',
+        method,
+        url,
+        message: msg,
+        details: err?.stack,
+      });
+    }
+    throw err;
+  }
 };
 
 // Auth API
