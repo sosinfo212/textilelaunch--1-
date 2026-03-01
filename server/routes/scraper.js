@@ -83,18 +83,19 @@ router.post('/run', authenticate, express.json(), async (req, res) => {
     ...process.env,
     TEXTILELAUNCH_API_KEY: apiKey,
   };
-  // Scraper must reach this app's API. Never pass localhost in production (override any bad process.env).
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Scraper must reach this app's API. Prefer explicit/public URLs; only use localhost in development.
+  const scraperApiUrl = (process.env.SCRAPER_API_URL || '').trim().replace(/\/?$/, '');
   const frontendUrl = (process.env.FRONTEND_URL || '').trim().replace(/\/$/, '');
   const isLocalhost = /^https?:\/\/localhost(\b|$)/i.test(frontendUrl) || /^https?:\/\/127\.0\.0\.1(\b|$)/i.test(frontendUrl);
-  if (frontendUrl && (!isProduction || !isLocalhost)) {
+  if (scraperApiUrl) {
+    env.TEXTILELAUNCH_API_URL = scraperApiUrl;
+  } else if (frontendUrl && !isLocalhost) {
     env.TEXTILELAUNCH_API_URL = frontendUrl + '/api';
-  } else if (!isProduction) {
+  } else if (process.env.NODE_ENV === 'production') {
+    env.TEXTILELAUNCH_API_URL = (process.env.SCRAPER_API_URL || 'https://trendycosmetix.com/api').replace(/\/?$/, '');
+  } else {
     const port = process.env.PORT || 5001;
     env.TEXTILELAUNCH_API_URL = `http://localhost:${port}/api`;
-  } else {
-    // Production without a valid FRONTEND_URL: force public API URL so we never inherit localhost from process.env
-    env.TEXTILELAUNCH_API_URL = (process.env.SCRAPER_API_URL || 'https://trendycosmetix.com/api').replace(/\/$/, '');
   }
 
   const projectRoot = dirname(dirname(SCRAPER_PATH));
