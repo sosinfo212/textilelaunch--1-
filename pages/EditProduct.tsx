@@ -18,6 +18,7 @@ export const EditProduct: React.FC = () => {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState(''); // Selling price
   const [regularPrice, setRegularPrice] = useState(''); // Regular price
+  const [cost, setCost] = useState(''); // Cost price
   const [currency, setCurrency] = useState('MAD'); // Currency
   const [sku, setSku] = useState(''); // SKU
   const [showSku, setShowSku] = useState(false); // Show SKU on landing page
@@ -50,6 +51,7 @@ export const EditProduct: React.FC = () => {
         setDescription(p.description);
         setPrice(p.price.toString());
         setRegularPrice(p.regularPrice ? p.regularPrice.toString() : '');
+        setCost(p.cost != null ? String(p.cost) : '');
         setCurrency(p.currency || 'MAD');
         setSku(p.sku || '');
         setShowSku(p.showSku || false);
@@ -181,6 +183,7 @@ export const EditProduct: React.FC = () => {
       description,
       price: parseFloat(price),
       regularPrice: regularPrice ? parseFloat(regularPrice) : undefined,
+      cost: cost ? parseFloat(cost) : undefined,
       currency: currency || 'MAD',
       sku: sku || undefined,
       showSku: showSku,
@@ -287,7 +290,7 @@ export const EditProduct: React.FC = () => {
             <p className="text-sm font-medium text-gray-700">Prix &amp; devise</p>
             <p className="text-xs text-gray-500">Choisissez la devise du produit pour les prix sur la landing page.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
              <div>
                 <label className="block text-sm font-medium text-gray-700">Prix de vente</label>
                 <input
@@ -309,6 +312,18 @@ export const EditProduct: React.FC = () => {
                 onChange={e => setRegularPrice(e.target.value)}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm"
                 placeholder="Ex: 45.00 (Prix barré)"
+                />
+             </div>
+             <div>
+                <label className="block text-sm font-medium text-gray-500">Coût (optionnel)</label>
+                <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={cost}
+                onChange={e => setCost(e.target.value)}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm"
+                placeholder="Ex: 15.00"
                 />
              </div>
              <div>

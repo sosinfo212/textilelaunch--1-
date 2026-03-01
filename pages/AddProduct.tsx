@@ -15,6 +15,7 @@ export const AddProduct: React.FC = () => {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState(''); // Selling price
   const [regularPrice, setRegularPrice] = useState(''); // Regular price (optional)
+  const [cost, setCost] = useState(''); // Cost price (optional)
   const [currency, setCurrency] = useState('MAD'); // Currency (MAD, EUR, USD, etc.)
   const [sku, setSku] = useState(''); // SKU
   const [showSku, setShowSku] = useState(false); // Show SKU on landing page
@@ -147,6 +148,7 @@ export const AddProduct: React.FC = () => {
       description,
       price: parseFloat(price),
       regularPrice: regularPrice ? parseFloat(regularPrice) : undefined,
+      cost: cost ? parseFloat(cost) : undefined,
       currency: currency || 'MAD',
       sku: sku || undefined,
       showSku: showSku,
@@ -250,7 +252,7 @@ export const AddProduct: React.FC = () => {
             <p className="text-sm font-medium text-gray-700">Prix &amp; devise</p>
             <p className="text-xs text-gray-500">Choisissez la devise du produit pour les prix sur la landing page.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
              <div>
                 <label className="block text-sm font-medium text-gray-700">Prix de vente</label>
                 <input
@@ -272,6 +274,18 @@ export const AddProduct: React.FC = () => {
                 onChange={e => setRegularPrice(e.target.value)}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm"
                 placeholder="Ex: 45.00 (Prix barré)"
+                />
+             </div>
+             <div>
+                <label className="block text-sm font-medium text-gray-500">Coût (optionnel)</label>
+                <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={cost}
+                onChange={e => setCost(e.target.value)}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm"
+                placeholder="Ex: 15.00"
                 />
              </div>
              <div>

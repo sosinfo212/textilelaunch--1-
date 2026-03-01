@@ -17,6 +17,7 @@ export interface Product {
   description: string;
   price: number; // This is the Selling Price
   regularPrice?: number; // This is the Original/Regular Price (optional)
+  cost?: number; // Cost price (e.g. for margin calculation)
   currency?: string; // Currency code (e.g., 'MAD', 'EUR', 'USD', 'DH')
   sku?: string; // Stock Keeping Unit
   showSku?: boolean; // Whether to display SKU on landing page
