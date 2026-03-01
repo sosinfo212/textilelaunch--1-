@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image, ExternalLink, Copy, Check, Eye, RefreshCw, Store, CreditCard, Activity, Link2, ScrollText } from 'lucide-react';
 import { User as UserType } from '../types';
-import { getApiDocsUrl } from '../src/utils/api';
+import { getApiDocsUrl, logsAPI } from '../src/utils/api';
 import { getLogs, clearLogs, subscribe, LogEntry } from '../src/utils/logStore';
+
+type ServerLogEntry = { id: string; time: string; level: string; method?: string; url?: string; status?: number; message: string; details?: string; count?: number; source?: string };
 
 export const SettingsPage: React.FC = () => {
     const { settings, updateSettings, refreshSettings } = useStore();
@@ -13,7 +15,9 @@ export const SettingsPage: React.FC = () => {
     type SettingsSection = 'boutique' | 'paiement' | 'tracking' | 'api' | 'integrations' | 'users' | 'log';
     const [activeSection, setActiveSection] = useState<SettingsSection>('boutique');
     const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
+    const [serverLogEntries, setServerLogEntries] = useState<ServerLogEntry[]>([]);
     const logEndRef = useRef<HTMLDivElement>(null);
+    const sseRef = useRef<EventSource | null>(null);
 
     // API key (shown once after generate; view modal for stored key)
     const [newApiKey, setNewApiKey] = useState<string | null>(null);
@@ -115,8 +119,39 @@ export const SettingsPage: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        if (activeSection !== 'log') {
+            if (sseRef.current) {
+                sseRef.current.close();
+                sseRef.current = null;
+            }
+            return;
+        }
+        logsAPI.getLogs().then((r) => setServerLogEntries(r.logs || [])).catch(() => setServerLogEntries([]));
+        const streamUrl = logsAPI.getStreamUrl();
+        const es = new EventSource(streamUrl, { withCredentials: true });
+        sseRef.current = es;
+        es.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                setServerLogEntries((prev) => [...prev, data].slice(-500));
+            } catch {}
+        };
+        es.onerror = () => {};
+        return () => {
+            es.close();
+            sseRef.current = null;
+        };
+    }, [activeSection]);
+
+    const mergedLogEntries = useMemo(() => {
+        const client = logEntries.map((e) => ({ ...e, source: 'client' as const }));
+        const server = serverLogEntries.map((e) => ({ id: e.id, time: e.time, level: e.level as LogEntry['level'], method: e.method, url: e.url, status: e.status, message: e.message, details: e.details, source: 'server' as const }));
+        return [...client, ...server].sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()).slice(-500);
+    }, [logEntries, serverLogEntries]);
+
+    useEffect(() => {
         if (activeSection === 'log') logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [activeSection, logEntries]);
+    }, [activeSection, mergedLogEntries]);
 
     const sidebarSections: { id: SettingsSection; label: string; icon: React.ReactNode }[] = [
         { id: 'boutique', label: 'Boutique', icon: <Store size={18} /> },
@@ -512,7 +547,7 @@ export const SettingsPage: React.FC = () => {
                                         </h2>
                                         <button
                                             type="button"
-                                            onClick={() => { clearLogs(); setLogEntries([]); }}
+                                            onClick={() => { clearLogs(); setLogEntries([]); setServerLogEntries([]); }}
                                             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200"
                                         >
                                             <Trash2 size={16} />
@@ -520,15 +555,15 @@ export const SettingsPage: React.FC = () => {
                                         </button>
                                     </div>
                                     <p className="text-sm text-gray-500 mb-4">
-                                        Requêtes, réponses et erreurs API (session en cours, max 500 entrées).
+                                        Requêtes, réponses et erreurs API. Entrées <strong>serveur</strong> (import produits) en temps réel.
                                     </p>
                                     <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
                                         <div className="max-h-[60vh] overflow-y-auto p-3 font-mono text-xs">
-                                            {logEntries.length === 0 ? (
-                                                <p className="text-gray-500 py-4 text-center">Aucune entrée. Les appels API apparaîtront ici.</p>
+                                            {mergedLogEntries.length === 0 ? (
+                                                <p className="text-gray-500 py-4 text-center">Aucune entrée. Les appels API et imports produits apparaîtront ici en temps réel.</p>
                                             ) : (
                                                 <div className="space-y-1">
-                                                    {logEntries.map((entry) => (
+                                                    {mergedLogEntries.map((entry) => (
                                                         <div
                                                             key={entry.id}
                                                             className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 py-1.5 px-2 rounded ${
@@ -538,9 +573,12 @@ export const SettingsPage: React.FC = () => {
                                                             }`}
                                                         >
                                                             <span className="text-gray-500 shrink-0">{new Date(entry.time).toLocaleTimeString('fr-FR')}</span>
+                                                            {'source' in entry && entry.source === 'server' && (
+                                                                <span className="shrink-0 rounded bg-amber-100 text-amber-800 px-1" title="Import API (scraper)">serveur</span>
+                                                            )}
                                                             <span className="font-semibold shrink-0 uppercase">{entry.level}</span>
                                                             {entry.method && <span className="shrink-0">{entry.method}</span>}
-                                                            {entry.url && <span className="truncate min-w-0" title={entry.url}>{entry.url.replace(/^.*\/api/, '/api')}</span>}
+                                                            {entry.url && <span className="truncate min-w-0" title={entry.url}>{String(entry.url).replace(/^.*\/api/, '/api')}</span>}
                                                             {entry.status != null && <span className="shrink-0">→ {entry.status}</span>}
                                                             <span className="min-w-0 break-words">{entry.message}</span>
                                                             {entry.details && <pre className="w-full mt-1 text-[10px] opacity-80 overflow-x-auto whitespace-pre-wrap">{entry.details}</pre>}

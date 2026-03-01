@@ -2,6 +2,7 @@ import express from 'express';
 import { db } from '../index.js';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticate } from '../middleware/auth.js';
+import * as serverLog from '../utils/serverLog.js';
 
 const router = express.Router();
 
@@ -142,12 +143,27 @@ router.post('/import', authenticate, async (req, res) => {
       }
     }
 
+    serverLog.add({
+      level: 'response',
+      method: 'POST',
+      url: '/api/products/import',
+      status: 201,
+      message: `Import: ${results.created.length} créé(s), ${results.skipped.length} ignoré(s), ${results.errors.length} erreur(s).`,
+      count: results.created.length,
+    });
     res.status(201).json({
       message: `Import complete: ${results.created.length} created, ${results.skipped.length} skipped, ${results.errors.length} errors.`,
       ...results
     });
   } catch (error) {
     console.error('Import products error:', error);
+    serverLog.add({
+      level: 'error',
+      method: 'POST',
+      url: '/api/products/import',
+      message: error.message || 'Import failed',
+      details: error.stack,
+    });
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
@@ -272,10 +288,24 @@ router.post('/', authenticate, async (req, res) => {
       [id]
     );
 
+    serverLog.add({
+      level: 'response',
+      method: 'POST',
+      url: '/api/products',
+      status: 201,
+      message: `Produit créé: ${name || id}`,
+      count: 1,
+    });
     res.status(201).json({ product: formatProduct(products[0]) });
   } catch (error) {
     console.error('Create product error:', error);
-    console.error('Error details:', error.message, error.stack);
+    serverLog.add({
+      level: 'error',
+      method: 'POST',
+      url: '/api/products',
+      message: error.message || 'Create product failed',
+      details: error.stack,
+    });
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });

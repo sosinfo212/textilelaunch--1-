@@ -457,6 +457,17 @@ export const integrationsAPI = {
   },
 };
 
+// Server log (product import API, etc.) - real-time via SSE
+export const logsAPI = {
+  getLogs: () => apiRequest<{ logs: Array<{ id: string; time: string; level: string; method?: string; url?: string; status?: number; message: string; details?: string; count?: number; source?: string }> }>('/logs'),
+  /** URL for EventSource to receive new log entries in real time (same-origin so cookies are sent). */
+  getStreamUrl: () => {
+    const base = API_BASE_URL.replace(/\/$/, '');
+    if (base.startsWith('http')) return `${base}/logs/stream`;
+    return `${typeof window !== 'undefined' ? window.location.origin : ''}${base}/logs/stream`;
+  },
+};
+
 // Scraper (run Python scraper, stream output; pass signal to cancel and stop the script)
 export const scraperAPI = {
   run: async (
