@@ -114,6 +114,8 @@ router.post('/import', authenticate, async (req, res) => {
       const supplier = item.supplier != null ? String(item.supplier) : null;
       const landingPageTemplateId = item.landingPageTemplateId || null;
       const paymentOptions = payOptsAllowed.includes(item.paymentOptions) ? item.paymentOptions : 'cod_only';
+      const costNum = item.cost != null ? (typeof item.cost === 'string' ? parseFloat(item.cost) : Number(item.cost)) : null;
+      const costVal = (costNum != null && !isNaN(costNum) && costNum >= 0) ? costNum : null;
 
       const imagesJson = JSON.stringify(images);
       const videosJson = JSON.stringify(videos);
@@ -122,11 +124,11 @@ router.post('/import', authenticate, async (req, res) => {
       try {
         await db.execute(
           `INSERT INTO products (
-            id, owner_id, name, description, price, regular_price, currency, sku, show_sku,
+            id, owner_id, name, description, price, regular_price, cost, currency, sku, show_sku,
             images, videos, attributes, category, supplier, landing_page_template_id, payment_options
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            id, userId, name, description, price, regularPriceNum, currency,
+            id, userId, name, description, price, regularPriceNum, costVal, currency,
             sku, showSku ? 1 : 0,
             imagesJson, videosJson, attributesJson, category, supplier,
             landingPageTemplateId, paymentOptions
@@ -135,7 +137,22 @@ router.post('/import', authenticate, async (req, res) => {
         const [rows] = await db.execute('SELECT * FROM products WHERE id = ?', [id]);
         results.created.push(formatProduct(rows[0]));
       } catch (err) {
-        if (skipInvalid) {
+        if (err.code === 'ER_BAD_FIELD_ERROR' && err.message && err.message.includes('cost')) {
+          await db.execute(
+            `INSERT INTO products (
+              id, owner_id, name, description, price, regular_price, currency, sku, show_sku,
+              images, videos, attributes, category, supplier, landing_page_template_id, payment_options
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              id, userId, name, description, price, regularPriceNum, currency,
+              sku, showSku ? 1 : 0,
+              imagesJson, videosJson, attributesJson, category, supplier,
+              landingPageTemplateId, paymentOptions
+            ]
+          );
+          const [rows] = await db.execute('SELECT * FROM products WHERE id = ?', [id]);
+          results.created.push(formatProduct(rows[0]));
+        } else if (skipInvalid) {
           results.skipped.push({ index: i, reason: err.message || 'Insert failed', item: { name, price } });
         } else {
           results.errors.push({ index: i, error: err.message || 'Insert failed' });
@@ -218,6 +235,7 @@ router.post('/', authenticate, async (req, res) => {
       description,
       price,
       regularPrice,
+      cost,
       currency,
       sku,
       showSku,
@@ -246,6 +264,8 @@ router.post('/', authenticate, async (req, res) => {
     // Ensure price is a number
     const priceNum = typeof price === 'string' ? parseFloat(price) : price;
     const regularPriceNum = regularPrice ? (typeof regularPrice === 'string' ? parseFloat(regularPrice) : regularPrice) : null;
+    const costNum = cost != null ? (typeof cost === 'string' ? parseFloat(cost) : Number(cost)) : null;
+    const costVal = (costNum != null && !isNaN(costNum) && costNum >= 0) ? costNum : null;
 
     if (isNaN(priceNum) || priceNum <= 0) {
       return res.status(400).json({ error: 'Invalid price' });
@@ -256,18 +276,18 @@ router.post('/', authenticate, async (req, res) => {
     try {
       await db.execute(
         `INSERT INTO products (
-          id, owner_id, name, description, price, regular_price, currency, sku, show_sku,
+          id, owner_id, name, description, price, regular_price, cost, currency, sku, show_sku,
           images, videos, attributes, category, supplier, landing_page_template_id, payment_options, reviews, show_reviews
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          id, userId, name, description || '', priceNum, regularPriceNum, currency || 'MAD',
+          id, userId, name, description || '', priceNum, regularPriceNum, costVal, currency || 'MAD',
           sku || null, showSku ? 1 : 0,
           imagesJson, videosJson, attributesJson, category || null, supplier || null,
           landingPageTemplateId || null, payOpts, reviewsJson, showReviewsVal
         ]
       );
     } catch (err) {
-      if (err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('reviews')) {
+      if (err.code === 'ER_BAD_FIELD_ERROR' && (err.message.includes('reviews') || err.message.includes('cost'))) {
         await db.execute(
           `INSERT INTO products (
             id, owner_id, name, description, price, regular_price, currency, sku, show_sku,
@@ -339,6 +359,7 @@ router.put('/:id', authenticate, async (req, res) => {
       description,
       price,
       regularPrice,
+      cost,
       currency,
       sku,
       showSku,
@@ -358,14 +379,16 @@ router.put('/:id', authenticate, async (req, res) => {
     const attributesJson = JSON.stringify(attributes || []);
     const reviewsJson = JSON.stringify(Array.isArray(reviews) ? reviews : []);
     const payOpts = ['cod_only', 'stripe_only', 'both'].includes(paymentOptions) ? paymentOptions : undefined;
+    const costVal = cost != null ? (typeof cost === 'string' ? parseFloat(cost) : Number(cost)) : null;
+    const costFinal = (costVal != null && !isNaN(costVal) && costVal >= 0) ? costVal : null;
 
     const updates = [
-      'name = ?', 'description = ?', 'price = ?', 'regular_price = ?', 'currency = ?', 'sku = ?', 'show_sku = ?',
+      'name = ?', 'description = ?', 'price = ?', 'regular_price = ?', 'cost = ?', 'currency = ?', 'sku = ?', 'show_sku = ?',
       'images = ?', 'videos = ?', 'attributes = ?', 'category = ?', 'supplier = ?',
       'landing_page_template_id = ?', 'reviews = ?', 'show_reviews = ?'
     ];
     const values = [
-      name, description || '', price, regularPrice || null, currency || 'MAD',
+      name, description || '', price, regularPrice || null, costFinal, currency || 'MAD',
       sku || null, showSku ? 1 : 0,
       imagesJson, videosJson, attributesJson, category || null, supplier || null,
       landingPageTemplateId || null, reviewsJson, showReviews === false ? 0 : 1
@@ -381,7 +404,7 @@ router.put('/:id', authenticate, async (req, res) => {
         values
       );
     } catch (err) {
-      if (err.code === 'ER_BAD_FIELD_ERROR' && err.message.includes('reviews')) {
+      if (err.code === 'ER_BAD_FIELD_ERROR' && (err.message.includes('reviews') || err.message.includes('cost'))) {
         const updatesBase = [
           'name = ?', 'description = ?', 'price = ?', 'regular_price = ?', 'currency = ?', 'sku = ?', 'show_sku = ?',
           'images = ?', 'videos = ?', 'attributes = ?', 'category = ?', 'supplier = ?',
@@ -746,6 +769,7 @@ function formatProduct(row) {
     description: row.description || '',
     price: parseFloat(row.price),
     regularPrice: row.regular_price ? parseFloat(row.regular_price) : undefined,
+    cost: row.cost != null ? parseFloat(row.cost) : undefined,
     currency: row.currency || 'MAD',
     sku: row.sku || undefined,
     showSku: row.show_sku === 1 || row.show_sku === true,
