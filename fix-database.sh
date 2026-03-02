@@ -75,6 +75,12 @@ if [ -f "${DEPLOY_PATH}/database/add-cost-column.sql" ]; then
   mysql -u ${DB_USER} -p${DB_PASSWORD} -h 127.0.0.1 ${DB_NAME} < "${DEPLOY_PATH}/database/add-cost-column.sql" 2>/dev/null && echo "✅ Cost column added" || echo "⚠️ Cost column may already exist (ok to ignore)"
 fi
 
+# Run API key plaintext column migration (so stored key can be used by scraper when field is empty)
+if [ -f "${DEPLOY_PATH}/database/add-api-key-plaintext-column.sql" ]; then
+  echo "Running API key plaintext column migration (if needed)..."
+  mysql -u ${DB_USER} -p${DB_PASSWORD} -h 127.0.0.1 ${DB_NAME} < "${DEPLOY_PATH}/database/add-api-key-plaintext-column.sql" 2>/dev/null && echo "✅ API key plaintext column added" || echo "⚠️ API key plaintext column may already exist (ok to ignore)"
+fi
+
 # Restart service to pick up new .env
 systemctl daemon-reload
 systemctl restart ${SERVICE_NAME}

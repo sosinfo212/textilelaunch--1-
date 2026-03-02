@@ -471,7 +471,7 @@ export const logsAPI = {
 // Scraper (run Python scraper, stream output; pass signal to cancel and stop the script)
 export const scraperAPI = {
   run: async (
-    body: { url: string; email: string; password: string; apiKey?: string },
+    body: { url: string; email: string; password: string; apiKey?: string; update_existing_sku?: boolean },
     onChunk: (text: string) => void,
     signal?: AbortSignal
   ): Promise<void> => {

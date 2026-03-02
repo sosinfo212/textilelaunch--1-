@@ -134,17 +134,27 @@ def load_products_from_json(path: str | Path) -> List[dict[str, Any]]:
     return [data]
 
 
+def _parse_update_existing_sku_env() -> bool:
+    """Read TEXTILELAUNCH_UPDATE_EXISTING_SKU from environment (default True)."""
+    val = (os.environ.get("TEXTILELAUNCH_UPDATE_EXISTING_SKU") or "true").strip().lower()
+    return val in ("1", "true", "yes")
+
+
 def sync_products_to_api(
     products: List[dict[str, Any]],
     api_base_url: str,
     api_key: str,
     use_import_endpoint: bool = True,
     skip_invalid: bool = True,
+    update_existing_sku: bool | None = None,
 ) -> tuple[int, int, List[str]]:
     """
     Send products to TextileLaunch API.
     Returns (success_count, failure_count, error_messages).
+    update_existing_sku: if True, update existing products with same SKU; if False, skip them. Default from env.
     """
+    if update_existing_sku is None:
+        update_existing_sku = _parse_update_existing_sku_env()
     api_base_url = api_base_url.rstrip("/")
     headers = {
         "Content-Type": "application/json",
@@ -156,12 +166,23 @@ def sync_products_to_api(
 
     if use_import_endpoint and len(transformed) > 0:
         url = f"{api_base_url}/products/import"
-        body = {"products": transformed, "skipInvalid": skip_invalid}
+        body = {
+            "products": transformed,
+            "skipInvalid": skip_invalid,
+            "updateExistingSku": update_existing_sku,
+        }
         try:
             r = requests.post(url, json=body, headers=headers, timeout=60)
             if r.ok:
-                success = len(transformed)
-                logger.info("API import success: %d product(s) sent to %s", success, url)
+                data = r.json()
+                created = len(data.get("created") or [])
+                updated = len(data.get("updated") or [])
+                skipped = len(data.get("skipped") or [])
+                success = created + updated
+                logger.info(
+                    "API import success: %d created, %d updated, %d skipped (sent %d to %s)",
+                    created, updated, skipped, len(transformed), url,
+                )
             else:
                 failure = len(transformed)
                 msg = f"Import failed: {r.status_code} - {r.text}"
@@ -573,8 +594,11 @@ async def main(
     api_key: Optional[str] = None,
     do_api_sync: bool = False,
     use_import_endpoint: bool = False,
+    update_existing_sku: bool | None = None,
 ) -> list[dict[str, Any]]:
     setup_logging(verbose=verbose)
+    if update_existing_sku is None:
+        update_existing_sku = _parse_update_existing_sku_env()
     config = get_website_config(website_url)
     logger.info("Using website: %s", config["base_url"])
     results: list[dict[str, Any]] = []
@@ -648,6 +672,7 @@ async def main(
                             api_key,
                             use_import_endpoint=use_import_endpoint,
                             skip_invalid=True,
+                            update_existing_sku=update_existing_sku,
                         )
                 except Exception as e:
                     logger.exception("Error scraping product %s: %s", url, e)
@@ -763,8 +788,12 @@ def cli() -> None:
             if not api_key:
                 logger.error("TEXTILELAUNCH_API_KEY is required for --api-sync. Set the environment variable.")
                 sys.exit(1)
+            update_sku = _parse_update_existing_sku_env()
             success, failure, errors = sync_products_to_api(
-                products, api_base_url, api_key, use_import_endpoint=not args.api_single, skip_invalid=True
+                products, api_base_url, api_key,
+                use_import_endpoint=not args.api_single,
+                skip_invalid=True,
+                update_existing_sku=update_sku,
             )
             for err in errors:
                 logger.warning("API error: %s", err)
@@ -776,6 +805,7 @@ def cli() -> None:
         sys.exit(1)
 
     import asyncio
+    update_sku = _parse_update_existing_sku_env()
     results = asyncio.run(
         main(
             email=args.email,
@@ -790,6 +820,7 @@ def cli() -> None:
             api_key=api_key if args.api_sync else None,
             do_api_sync=bool(args.api_sync),
             use_import_endpoint=not args.api_single,
+            update_existing_sku=update_sku,
         )
     )
 

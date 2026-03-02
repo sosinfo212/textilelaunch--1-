@@ -27,10 +27,11 @@ router.post('/run', authenticate, express.json(), async (req, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  let { url, email, password, apiKey } = req.body || {};
+  let { url, email, password, apiKey, update_existing_sku } = req.body || {};
   url = url && String(url).trim();
   email = email && String(email).trim();
   password = password != null ? String(password) : '';
+  const updateExistingSku = update_existing_sku !== false;
 
   if (!url) {
     return res.status(400).json({ error: 'URL is required' });
@@ -42,17 +43,27 @@ router.post('/run', authenticate, express.json(), async (req, res) => {
   if (!apiKey || !String(apiKey).trim()) {
     try {
       const [rows] = await db.execute(
-        'SELECT api_key_plaintext FROM app_settings WHERE user_id = ? LIMIT 1',
+        'SELECT api_key_plaintext, api_key_hash FROM app_settings WHERE user_id = ? LIMIT 1',
         [userId]
       );
       if (rows.length > 0 && rows[0].api_key_plaintext) {
         apiKey = rows[0].api_key_plaintext.trim();
+      } else if (rows.length > 0 && rows[0].api_key_hash) {
+        return res.status(400).json({
+          error: 'Clé API créée avant la sauvegarde. Allez dans Paramètres → API et cliquez sur « Régénérer la clé » une fois pour qu’elle soit utilisée automatiquement par le scraper.',
+        });
       }
     } catch (e) {
-      // ignore
+      if (e.code === 'ER_BAD_FIELD_ERROR' && e.message && e.message.includes('api_key_plaintext')) {
+        return res.status(503).json({
+          error: 'Colonne api_key_plaintext manquante. Exécutez database/add-api-key-plaintext-column.sql sur la base (ou relancez fix-database.sh).',
+        });
+      }
     }
     if (!apiKey) {
-      return res.status(400).json({ error: 'API key is required. Provide it in the form or generate one in Settings.' });
+      return res.status(400).json({
+        error: 'Aucune clé API. Générez-en une dans Paramètres → API, puis relancez le scraper (vous pouvez laisser le champ vide après).',
+      });
     }
   } else {
     apiKey = String(apiKey).trim();
@@ -82,6 +93,7 @@ router.post('/run', authenticate, express.json(), async (req, res) => {
   const env = {
     ...process.env,
     TEXTILELAUNCH_API_KEY: apiKey,
+    TEXTILELAUNCH_UPDATE_EXISTING_SKU: updateExistingSku ? '1' : '0',
   };
   // Scraper must reach this app's API. Prefer explicit/public URLs; only use localhost in development.
   const scraperApiUrl = (process.env.SCRAPER_API_URL || '').trim().replace(/\/?$/, '');

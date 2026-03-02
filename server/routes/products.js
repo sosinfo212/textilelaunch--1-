@@ -76,7 +76,7 @@ router.post('/import', authenticate, async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { products: productsPayload, skipInvalid = true } = req.body;
+    const { products: productsPayload, skipInvalid = true, updateExistingSku = false } = req.body;
     if (!Array.isArray(productsPayload) || productsPayload.length === 0) {
       return res.status(400).json({
         error: 'Request body must include a "products" array with at least one item.',
@@ -84,7 +84,7 @@ router.post('/import', authenticate, async (req, res) => {
       });
     }
 
-    const results = { created: [], skipped: [], errors: [] };
+    const results = { created: [], updated: [], skipped: [], errors: [] };
     const payOptsAllowed = ['cod_only', 'stripe_only', 'both'];
 
     for (let i = 0; i < productsPayload.length; i++) {
@@ -95,17 +95,18 @@ router.post('/import', authenticate, async (req, res) => {
       if (!name || isNaN(price) || price <= 0) {
         if (skipInvalid) {
           results.skipped.push({ index: i, reason: 'Missing or invalid name/price', item: { name: item.name, price: item.price } });
+          serverLog.add({ level: 'info', message: `Import product ${i + 1}: skipped (invalid name/price)`, url: '/api/products/import' });
           continue;
         }
         results.errors.push({ index: i, error: 'Name and price are required; price must be a positive number.' });
         continue;
       }
 
-      const id = `Prod_${uuidv4()}`;
       const description = item.description != null ? String(item.description) : '';
       const regularPriceNum = item.regularPrice != null ? (typeof item.regularPrice === 'string' ? parseFloat(item.regularPrice) : Number(item.regularPrice)) : null;
       const currency = item.currency != null ? String(item.currency) : 'MAD';
-      const sku = item.sku != null ? String(item.sku) : null;
+      const sku = item.sku != null ? String(item.sku).trim() : null;
+      const skuNonEmpty = sku !== null && sku !== '';
       const showSku = Boolean(item.showSku);
       const images = Array.isArray(item.images) ? item.images : (item.images ? [item.images] : []);
       const videos = Array.isArray(item.videos) ? item.videos : (item.videos ? [item.videos] : []);
@@ -121,6 +122,67 @@ router.post('/import', authenticate, async (req, res) => {
       const videosJson = JSON.stringify(videos);
       const attributesJson = JSON.stringify(attributes);
 
+      let existingId = null;
+      if (skuNonEmpty) {
+        const [existing] = await db.execute(
+          'SELECT id FROM products WHERE owner_id = ? AND sku = ? LIMIT 1',
+          [userId, sku]
+        );
+        if (existing.length > 0) existingId = existing[0].id;
+      }
+
+      if (existingId) {
+        if (updateExistingSku) {
+          try {
+            await db.execute(
+              `UPDATE products SET
+                name = ?, description = ?, price = ?, regular_price = ?, cost = ?, currency = ?, sku = ?, show_sku = ?,
+                images = ?, videos = ?, attributes = ?, category = ?, supplier = ?, landing_page_template_id = ?, payment_options = ?
+              WHERE id = ?`,
+              [
+                name, description, price, regularPriceNum, costVal, currency,
+                sku, showSku ? 1 : 0,
+                imagesJson, videosJson, attributesJson, category, supplier,
+                landingPageTemplateId, paymentOptions,
+                existingId
+              ]
+            );
+            const [rows] = await db.execute('SELECT * FROM products WHERE id = ?', [existingId]);
+            results.updated.push(formatProduct(rows[0]));
+            serverLog.add({ level: 'info', message: `Import product ${i + 1}: updated (SKU: ${sku})`, url: '/api/products/import' });
+          } catch (err) {
+            if (err.code === 'ER_BAD_FIELD_ERROR' && err.message && err.message.includes('cost')) {
+              await db.execute(
+                `UPDATE products SET
+                  name = ?, description = ?, price = ?, regular_price = ?, currency = ?, sku = ?, show_sku = ?,
+                  images = ?, videos = ?, attributes = ?, category = ?, supplier = ?, landing_page_template_id = ?, payment_options = ?
+                WHERE id = ?`,
+                [
+                  name, description, price, regularPriceNum, currency,
+                  sku, showSku ? 1 : 0,
+                  imagesJson, videosJson, attributesJson, category, supplier,
+                  landingPageTemplateId, paymentOptions,
+                  existingId
+                ]
+              );
+              const [rows] = await db.execute('SELECT * FROM products WHERE id = ?', [existingId]);
+              results.updated.push(formatProduct(rows[0]));
+              serverLog.add({ level: 'info', message: `Import product ${i + 1}: updated (SKU: ${sku})`, url: '/api/products/import' });
+            } else if (skipInvalid) {
+              results.skipped.push({ index: i, reason: err.message || 'Update failed', item: { name, sku } });
+              serverLog.add({ level: 'info', message: `Import product ${i + 1}: skipped (update failed)`, url: '/api/products/import' });
+            } else {
+              results.errors.push({ index: i, error: err.message || 'Update failed' });
+            }
+          }
+        } else {
+          results.skipped.push({ index: i, reason: 'SKU already exists', item: { name, sku } });
+          serverLog.add({ level: 'info', message: `Import product ${i + 1}: skipped (SKU exists: ${sku})`, url: '/api/products/import' });
+        }
+        continue;
+      }
+
+      const id = `Prod_${uuidv4()}`;
       try {
         await db.execute(
           `INSERT INTO products (
@@ -136,6 +198,7 @@ router.post('/import', authenticate, async (req, res) => {
         );
         const [rows] = await db.execute('SELECT * FROM products WHERE id = ?', [id]);
         results.created.push(formatProduct(rows[0]));
+        serverLog.add({ level: 'info', message: `Import product ${i + 1}: created${skuNonEmpty ? ` (SKU: ${sku})` : ''}`, url: '/api/products/import' });
       } catch (err) {
         if (err.code === 'ER_BAD_FIELD_ERROR' && err.message && err.message.includes('cost')) {
           await db.execute(
@@ -152,8 +215,10 @@ router.post('/import', authenticate, async (req, res) => {
           );
           const [rows] = await db.execute('SELECT * FROM products WHERE id = ?', [id]);
           results.created.push(formatProduct(rows[0]));
+          serverLog.add({ level: 'info', message: `Import product ${i + 1}: created${skuNonEmpty ? ` (SKU: ${sku})` : ''}`, url: '/api/products/import' });
         } else if (skipInvalid) {
           results.skipped.push({ index: i, reason: err.message || 'Insert failed', item: { name, price } });
+          serverLog.add({ level: 'info', message: `Import product ${i + 1}: skipped (insert failed)`, url: '/api/products/import' });
         } else {
           results.errors.push({ index: i, error: err.message || 'Insert failed' });
         }
@@ -165,11 +230,11 @@ router.post('/import', authenticate, async (req, res) => {
       method: 'POST',
       url: '/api/products/import',
       status: 201,
-      message: `Import: ${results.created.length} créé(s), ${results.skipped.length} ignoré(s), ${results.errors.length} erreur(s).`,
-      count: results.created.length,
+      message: `Import: ${results.created.length} créé(s), ${results.updated.length} mis à jour, ${results.skipped.length} ignoré(s), ${results.errors.length} erreur(s).`,
+      count: results.created.length + results.updated.length,
     });
     res.status(201).json({
-      message: `Import complete: ${results.created.length} created, ${results.skipped.length} skipped, ${results.errors.length} errors.`,
+      message: `Import complete: ${results.created.length} created, ${results.updated.length} updated, ${results.skipped.length} skipped, ${results.errors.length} errors.`,
       ...results
     });
   } catch (error) {

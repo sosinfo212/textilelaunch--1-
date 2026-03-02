@@ -30,6 +30,7 @@ export const SellerDashboard: React.FC = () => {
   const [scrapPassword, setScrapPassword] = useState('');
   const [scrapApiKey, setScrapApiKey] = useState('');
   const [scrapApiKeyReason, setScrapApiKeyReason] = useState<string | undefined>(undefined);
+  const [scrapUpdateExistingSku, setScrapUpdateExistingSku] = useState(true);
   const [scrapOutput, setScrapOutput] = useState('');
   const [scrapRunning, setScrapRunning] = useState(false);
   const [affiliateConnections, setAffiliateConnections] = useState<{ id: string; name: string; loginUrl: string }[]>([]);
@@ -712,6 +713,18 @@ export const SellerDashboard: React.FC = () => {
                     Clé créée avant la sauvegarde : régénérez-la une fois dans Paramètres pour qu’elle soit utilisée automatiquement.
                   </p>
                 )}
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="scrap-update-existing-sku"
+                  checked={scrapUpdateExistingSku}
+                  onChange={(e) => setScrapUpdateExistingSku(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                />
+                <label htmlFor="scrap-update-existing-sku" className="text-sm text-gray-700">
+                  Mettre à jour les produits existants (même SKU) — si désactivé, les produits avec SKU déjà présent sont ignorés.
+                </label>
               </div>
               <div className="flex justify-end gap-2">
                 <button
