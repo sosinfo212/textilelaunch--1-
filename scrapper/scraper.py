@@ -108,9 +108,16 @@ def _normalize_images(images: Any) -> List[str]:
 
 def transform_product_to_api(raw: dict[str, Any]) -> dict[str, Any]:
     """Transform a scraped product to TextileLaunch API format."""
+    raw_cost = raw.get("cost")
+    cost_val = None
+    if raw_cost is not None and raw_cost != "":
+        cost_val = _parse_price(raw_cost)
+        if cost_val < 0:
+            cost_val = None
     return {
         "name": str((raw.get("name") or "")).strip(),
         "price": _parse_price(raw.get("price")),
+        "cost": cost_val,
         "images": _normalize_images(raw.get("images")),
         "description": str((raw.get("description") or "")).strip(),
         "currency": str((raw.get("currency") or "MAD")).strip(),
@@ -472,6 +479,7 @@ async def scrape_product_details(
         "name": "",
         "sku": product_url,
         "price": "",
+        "cost": "",
         "images": "",
         "website": website_name,
         "description": "",
@@ -657,6 +665,7 @@ async def main(
                         "name": product_data.get("name", ""),
                         "sku": product_data.get("sku", url),
                         "price": product_data.get("price", ""),
+                        "cost": product_data.get("cost", ""),
                         "images": product_data.get("images", ""),
                         "website": product_data.get("website", config["website_name"]),
                         "description": product_data.get("description", ""),
