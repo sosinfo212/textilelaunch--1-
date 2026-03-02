@@ -39,6 +39,7 @@ SELECTORS = {
     "page_link": "a.page-link",
     # Product detail page
     "product_price": "span.text-xl",
+    "product_cost": "span.ml-1",
     "product_images": "div.swiper-slide > img",
     "product_description": "p.leading-relaxed.text-gray-600",
     "size_option_label": ".size-option label",
@@ -525,6 +526,13 @@ async def scrape_product_details(
         el = await page.query_selector(SELECTORS["product_price"])
         if el:
             result["price"] = (await el.text_content() or "").strip()
+    except Exception:
+        pass
+    # Cost: span.ml-1
+    try:
+        el = await page.query_selector(SELECTORS["product_cost"])
+        if el:
+            result["Cost"] = (await el.text_content() or "").strip()
     except Exception:
         pass
 
