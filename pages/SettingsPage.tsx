@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image, ExternalLink, Copy, Check, Eye, RefreshCw, Store, CreditCard, Activity, Link2, ScrollText } from 'lucide-react';
 import { User as UserType } from '../types';
-import { getApiDocsUrl, logsAPI } from '../src/utils/api';
+import { getApiDocsUrl, logsAPI, settingsAPI } from '../src/utils/api';
 import { getLogs, clearLogs, subscribe, LogEntry } from '../src/utils/logStore';
 
 type ServerLogEntry = { id: string; time: string; level: string; method?: string; url?: string; status?: number; message: string; details?: string; count?: number; source?: string };
@@ -347,7 +347,7 @@ export const SettingsPage: React.FC = () => {
                                                                 setApiKeyError('');
                                                                 setViewApiKeyLoading(true);
                                                                 try {
-                                                                    const res = await import('../src/utils/api').then(m => m.settingsAPI.getApiKey());
+                                                                    const res = await settingsAPI.getApiKey();
                                                                     if (res.apiKey) setViewApiKeyModal(res.apiKey);
                                                                     else setApiKeyError((res as { reason?: string }).reason === 'key_created_before_storage'
                                                                         ? 'key_created_before_storage'
@@ -371,7 +371,7 @@ export const SettingsPage: React.FC = () => {
                                                                 setApiKeyError('');
                                                                 setApiKeyGenerating(true);
                                                                 try {
-                                                                    const res = await import('../src/utils/api').then(m => m.settingsAPI.generateApiKey());
+                                                                    const res = await settingsAPI.generateApiKey();
                                                                     setNewApiKey(res.apiKey);
                                                                     setViewApiKeyModal(null);
                                                                     await refreshSettings();
@@ -395,7 +395,7 @@ export const SettingsPage: React.FC = () => {
                                                         setApiKeyError('');
                                                         setApiKeyGenerating(true);
                                                         try {
-                                                            const res = await import('../src/utils/api').then(m => m.settingsAPI.generateApiKey());
+                                                            const res = await settingsAPI.generateApiKey();
                                                             setNewApiKey(res.apiKey);
                                                             setViewApiKeyModal(null);
                                                             await refreshSettings();
@@ -449,7 +449,7 @@ export const SettingsPage: React.FC = () => {
                                                         setApiKeyError('');
                                                         setApiKeyGenerating(true);
                                                         try {
-                                                            const res = await import('../src/utils/api').then(m => m.settingsAPI.generateApiKey());
+                                                            const res = await settingsAPI.generateApiKey();
                                                             setNewApiKey(res.apiKey);
                                                             setViewApiKeyModal(null);
                                                             await refreshSettings();
