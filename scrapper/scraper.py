@@ -179,8 +179,11 @@ def sync_products_to_api(
             "skipInvalid": skip_invalid,
             "updateExistingSku": update_existing_sku,
         }
-        for i, prod in enumerate(transformed, 1):
-            print(f"\n[Import product {i}/{len(transformed)}]")
+        for i, (raw, prod) in enumerate(zip(products, transformed), 1):
+            print(f"\n--- Product {i}/{len(transformed)} ---")
+            print("[Scraper output]")
+            print(json.dumps(raw, ensure_ascii=False, indent=2))
+            print("[API input]")
             print(json.dumps(prod, ensure_ascii=False, indent=2))
         try:
             r = requests.post(url, json=body, headers=headers, timeout=60)
@@ -195,6 +198,8 @@ def sync_products_to_api(
                     created, updated, skipped, len(transformed), url,
                 )
                 print(f"\n[Import result] created: {created}, updated: {updated}, skipped: {skipped}")
+                print("[API response]")
+                print(json.dumps(data, ensure_ascii=False, indent=2))
             else:
                 failure = len(transformed)
                 msg = f"Import failed: {r.status_code} - {r.text}"
@@ -207,20 +212,26 @@ def sync_products_to_api(
         return success, failure, errors
 
     # Single-product POST per item
-    for i, payload in enumerate(transformed):
+    for i, (raw, payload) in enumerate(zip(products, transformed)):
         url = f"{api_base_url}/products"
-        print(f"\n[Import product {i + 1}/{len(transformed)}]")
+        print(f"\n--- Product {i + 1}/{len(transformed)} ---")
+        print("[Scraper output]")
+        print(json.dumps(raw, ensure_ascii=False, indent=2))
+        print("[API input]")
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         try:
             r = requests.post(url, json=payload, headers=headers, timeout=30)
             if r.ok:
                 success += 1
                 logger.info("Product %d/%d created (name=%s)", i + 1, len(transformed), payload.get("name", "")[:30])
+                print("[API response]")
+                print(json.dumps(r.json(), ensure_ascii=False, indent=2))
             else:
                 failure += 1
                 msg = f"Product {i + 1} ({payload.get('sku', '')}): {r.status_code} - {r.text}"
                 errors.append(msg)
                 logger.warning("%s", msg)
+                print(f"[API error] {r.status_code} - {r.text}")
         except requests.RequestException as e:
             failure += 1
             errors.append(f"Product {i + 1}: {e}")
