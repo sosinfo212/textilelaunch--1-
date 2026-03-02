@@ -178,6 +178,9 @@ def sync_products_to_api(
             "skipInvalid": skip_invalid,
             "updateExistingSku": update_existing_sku,
         }
+        for i, prod in enumerate(transformed, 1):
+            print(f"\n[Import product {i}/{len(transformed)}]")
+            print(json.dumps(prod, ensure_ascii=False, indent=2))
         try:
             r = requests.post(url, json=body, headers=headers, timeout=60)
             if r.ok:
@@ -190,6 +193,7 @@ def sync_products_to_api(
                     "API import success: %d created, %d updated, %d skipped (sent %d to %s)",
                     created, updated, skipped, len(transformed), url,
                 )
+                print(f"\n[Import result] created: {created}, updated: {updated}, skipped: {skipped}")
             else:
                 failure = len(transformed)
                 msg = f"Import failed: {r.status_code} - {r.text}"
@@ -204,6 +208,8 @@ def sync_products_to_api(
     # Single-product POST per item
     for i, payload in enumerate(transformed):
         url = f"{api_base_url}/products"
+        print(f"\n[Import product {i + 1}/{len(transformed)}]")
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
         try:
             r = requests.post(url, json=payload, headers=headers, timeout=30)
             if r.ok:
