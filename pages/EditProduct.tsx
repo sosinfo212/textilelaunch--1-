@@ -183,7 +183,7 @@ export const EditProduct: React.FC = () => {
       description,
       price: parseFloat(price),
       regularPrice: regularPrice ? parseFloat(regularPrice) : undefined,
-      cost: cost ? parseFloat(cost) : undefined,
+      cost: cost !== '' && cost !== undefined && !isNaN(parseFloat(cost)) ? parseFloat(cost) : undefined,
       currency: currency || 'MAD',
       sku: sku || undefined,
       showSku: showSku,

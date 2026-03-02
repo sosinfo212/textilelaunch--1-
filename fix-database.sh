@@ -69,6 +69,12 @@ fi
 echo "Testing database connection..."
 mysql -u ${DB_USER} -p${DB_PASSWORD} -h 127.0.0.1 ${DB_NAME} -e "SELECT 1;" && echo "✅ Database connection successful" || echo "❌ Database connection failed"
 
+# Run cost column migration if needed (idempotent: run add-cost-column.sql; ignore error if column exists)
+if [ -f "${DEPLOY_PATH}/database/add-cost-column.sql" ]; then
+  echo "Running product cost column migration (if needed)..."
+  mysql -u ${DB_USER} -p${DB_PASSWORD} -h 127.0.0.1 ${DB_NAME} < "${DEPLOY_PATH}/database/add-cost-column.sql" 2>/dev/null && echo "✅ Cost column added" || echo "⚠️ Cost column may already exist (ok to ignore)"
+fi
+
 # Restart service to pick up new .env
 systemctl daemon-reload
 systemctl restart ${SERVICE_NAME}

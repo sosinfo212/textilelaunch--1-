@@ -231,12 +231,13 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const updateProduct = async (product: Product) => {
     if (!user) return;
     try {
+      const costNum = typeof product.cost === 'number' && !isNaN(product.cost) && product.cost >= 0 ? product.cost : null;
       const productData: any = {
         name: product.name,
         description: product.description || '',
         price: product.price,
         regularPrice: product.regularPrice,
-        cost: product.cost,
+        cost: costNum,
         currency: product.currency || 'MAD',
         sku: product.sku,
         showSku: product.showSku || false,

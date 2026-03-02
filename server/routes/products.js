@@ -769,7 +769,7 @@ function formatProduct(row) {
     description: row.description || '',
     price: parseFloat(row.price),
     regularPrice: row.regular_price ? parseFloat(row.regular_price) : undefined,
-    cost: row.cost != null ? parseFloat(row.cost) : undefined,
+    cost: (row.cost != null || row.COST != null) ? parseFloat(row.cost ?? row.COST) : undefined,
     currency: row.currency || 'MAD',
     sku: row.sku || undefined,
     showSku: row.show_sku === 1 || row.show_sku === true,

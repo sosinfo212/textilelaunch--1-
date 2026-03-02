@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS products (
   description TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   price DECIMAL(10, 2) NOT NULL,
   regular_price DECIMAL(10, 2),
+  cost DECIMAL(10, 2) NULL COMMENT 'Cost price of the product',
   currency VARCHAR(10) DEFAULT 'MAD',
   sku VARCHAR(100),
   show_sku BOOLEAN DEFAULT FALSE,
