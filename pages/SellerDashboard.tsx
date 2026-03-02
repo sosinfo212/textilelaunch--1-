@@ -29,6 +29,7 @@ export const SellerDashboard: React.FC = () => {
   const [scrapEmail, setScrapEmail] = useState('');
   const [scrapPassword, setScrapPassword] = useState('');
   const [scrapApiKey, setScrapApiKey] = useState('');
+  const [scrapApiKeyReason, setScrapApiKeyReason] = useState<string | undefined>(undefined);
   const [scrapOutput, setScrapOutput] = useState('');
   const [scrapRunning, setScrapRunning] = useState(false);
   const [affiliateConnections, setAffiliateConnections] = useState<{ id: string; name: string; loginUrl: string }[]>([]);
@@ -37,16 +38,16 @@ export const SellerDashboard: React.FC = () => {
 
   useEffect(() => {
     if (scrapModalOpen) {
-      if (!scrapApiKey) {
-        settingsAPI.getApiKey().then((r) => {
-          if (r.apiKey) setScrapApiKey(r.apiKey);
-        }).catch(() => {});
-      }
+      settingsAPI.getApiKey().then((r) => {
+        if (r.apiKey) setScrapApiKey(r.apiKey);
+        else setScrapApiKey('');
+        setScrapApiKeyReason(r.reason);
+      }).catch(() => { setScrapApiKey(''); setScrapApiKeyReason(undefined); });
       integrationsAPI.getAffiliateConnections().then((r) => {
         setAffiliateConnections(r.connections || []);
       }).catch(() => setAffiliateConnections([]));
     }
-  }, [scrapModalOpen, scrapApiKey]);
+  }, [scrapModalOpen]);
 
   const handleScrapSelectAffiliate = async (connectionId: string) => {
     setScrapSelectedConnectionId(connectionId);
@@ -695,14 +696,22 @@ export const SellerDashboard: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">API (clé sauvegardée si vide)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">API</label>
                 <input
                   type="password"
                   value={scrapApiKey}
                   onChange={(e) => setScrapApiKey(e.target.value)}
-                  placeholder="Chargée depuis Paramètres si disponible"
+                  placeholder="Laissé vide : clé enregistrée en Paramètres utilisée automatiquement"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 font-mono text-sm"
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  Générez la clé une seule fois dans Paramètres → API. Elle est rechargée ici à chaque ouverture et utilisée si le champ est vide.
+                </p>
+                {scrapApiKeyReason === 'key_created_before_storage' && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    Clé créée avant la sauvegarde : régénérez-la une fois dans Paramètres pour qu’elle soit utilisée automatiquement.
+                  </p>
+                )}
               </div>
               <div className="flex justify-end gap-2">
                 <button

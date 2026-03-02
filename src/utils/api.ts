@@ -333,7 +333,7 @@ export const settingsAPI = {
 
   /** Get stored API key for viewing (authenticated owner only). */
   getApiKey: async () => {
-    return apiRequest<{ apiKey: string | null }>('/settings/api-key');
+    return apiRequest<{ apiKey: string | null; reason?: string }>('/settings/api-key');
   },
 };
 
