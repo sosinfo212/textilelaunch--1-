@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { Product, ProductAttribute } from '../types';
-import { generateProductDescription } from '../services/aiService';
+import { generateProductDescription, mergeAttributesForPrompt } from '../services/aiService';
 import { fileToBase64, convertImagesToBase64, isVideo, isImage } from '../src/utils/imageUtils';
 import { PRODUCT_CURRENCIES } from '../src/utils/currency';
 import { Sparkles, Plus, Trash2, Image as ImageIcon, Loader2, Edit2, X, Eye, EyeOff, Video } from 'lucide-react';
@@ -110,7 +110,13 @@ export const AddProduct: React.FC = () => {
     if (!name) return alert("Veuillez entrer un nom de produit d'abord.");
     setIsGenerating(true);
     // Pass the API Key from settings
-    const desc = await generateProductDescription(name, "textile, mode, confort, qualité", settings.llmModel);
+    const attrsForPrompt = mergeAttributesForPrompt(attributes, newAttrName, newAttrOptions, editIndex);
+    const desc = await generateProductDescription(
+      name,
+      "textile, mode, confort, qualité",
+      settings.llmModel,
+      attrsForPrompt
+    );
     setDescription(desc);
     setIsGenerating(false);
     setIsPreviewMode(true);
