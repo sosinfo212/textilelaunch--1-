@@ -15,12 +15,29 @@ cd ${DEPLOY_PATH}
 # Configure Git safe directory
 git config --global --add safe.directory ${DEPLOY_PATH}
 
+# Preserve production .env before git reset (tracked .env in repo must not overwrite server secrets)
+ENV_BACKUP=""
+if [ -f "${DEPLOY_PATH}/.env" ]; then
+  ENV_BACKUP=$(mktemp)
+  cp "${DEPLOY_PATH}/.env" "${ENV_BACKUP}"
+  echo "Backed up existing .env"
+fi
+
 # Pull latest changes
 git fetch origin
 git reset --hard origin/main || git reset --hard origin/master
 
-# Set ownership
+if [ -n "${ENV_BACKUP}" ] && [ -f "${ENV_BACKUP}" ]; then
+  cp "${ENV_BACKUP}" "${DEPLOY_PATH}/.env"
+  rm -f "${ENV_BACKUP}"
+  chown ${APP_USER}:${APP_USER} "${DEPLOY_PATH}/.env"
+  chmod 600 "${DEPLOY_PATH}/.env"
+  echo "Restored production .env after git pull"
+fi
+
+# Set ownership (after restore so .env keeps correct owner)
 chown -R ${APP_USER}:${APP_USER} ${DEPLOY_PATH}
+chmod 600 "${DEPLOY_PATH}/.env" 2>/dev/null || true
 
 # Rebuild frontend if needed
 if [ -f "package.json" ]; then

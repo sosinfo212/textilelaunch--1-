@@ -55,8 +55,15 @@ else
     sed -i "s|^FRONTEND_URL=.*|FRONTEND_URL=https://trendycosmetix.com|" ${DEPLOY_PATH}/.env
     sed -i "s|^COOKIE_SECURE=.*|COOKIE_SECURE=true|" ${DEPLOY_PATH}/.env
     sed -i "s|^COOKIE_SAMESITE=.*|COOKIE_SAMESITE=lax|" ${DEPLOY_PATH}/.env
-    if ! grep -q "^SCRAPER_API_URL=" ${DEPLOY_PATH}/.env; then
-        echo "SCRAPER_API_URL=https://trendycosmetix.com/api" >> ${DEPLOY_PATH}/.env
+    sed -i "s|^SCRAPER_API_URL=.*|SCRAPER_API_URL=https://trendycosmetix.com/api|" ${DEPLOY_PATH}/.env 2>/dev/null || \
+      echo "SCRAPER_API_URL=https://trendycosmetix.com/api" >> ${DEPLOY_PATH}/.env
+    sed -i "s/^NODE_ENV=.*/NODE_ENV=production/" ${DEPLOY_PATH}/.env 2>/dev/null || true
+
+    # Reject accidental local dev DB user (common cause of login failures after deploy)
+    if grep -q "^DB_USER=root" ${DEPLOY_PATH}/.env; then
+        echo "⚠️  DB_USER was root (dev settings) — fixing to ${DB_USER}"
+        sed -i "s/^DB_USER=.*/DB_USER=${DB_USER}/" ${DEPLOY_PATH}/.env
+        sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=${DB_PASSWORD}/" ${DEPLOY_PATH}/.env
     fi
     
     echo "✅ Updated .env file"
