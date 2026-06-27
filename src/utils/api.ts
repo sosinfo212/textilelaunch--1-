@@ -405,15 +405,18 @@ export const trackingAPI = {
   },
 };
 
-// Gemini API
-export const geminiAPI = {
-  generate: async (prompt: string, productName?: string, keywords?: string) => {
-    return apiRequest<{ text: string }>('/gemini/generate', {
+// AI (OpenRouter) API
+export const aiAPI = {
+  generate: async (prompt: string, productName?: string, keywords?: string, model?: string) => {
+    return apiRequest<{ text: string; model?: string }>('/ai/generate', {
       method: 'POST',
-      body: JSON.stringify({ prompt, productName, keywords }),
+      body: JSON.stringify({ prompt, productName, keywords, model }),
     });
   },
 };
+
+/** @deprecated use aiAPI */
+export const geminiAPI = aiAPI;
 
 // Integrations API (affiliate networks)
 export const integrationsAPI = {

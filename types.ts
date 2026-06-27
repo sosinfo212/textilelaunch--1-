@@ -133,7 +133,9 @@ export interface AppSettings {
   userId: string;
   shopName: string;
   logoUrl: string;
-  geminiApiKey: string;
+  geminiApiKey: string; // deprecated, kept for DB compat
+  openrouterApiKey: string;
+  llmModel: string;
   facebookPixelCode?: string;
   tiktokPixelCode?: string;
   stripePublishableKey?: string;

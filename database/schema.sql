@@ -76,6 +76,8 @@ CREATE TABLE IF NOT EXISTS app_settings (
   shop_name VARCHAR(191) DEFAULT 'Trendy Cosmetix Store',
   logo_url TEXT,
   gemini_api_key TEXT,
+  openrouter_api_key TEXT,
+  llm_model VARCHAR(191) DEFAULT 'google/gemini-2.0-flash-001',
   facebook_pixel_code TEXT,
   tiktok_pixel_code TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

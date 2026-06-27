@@ -78,6 +78,12 @@ if [ -f "${DEPLOY_PATH}/database/add-api-key-plaintext-column.sql" ]; then
   mysql -u ${DB_USER} -p${DB_PASSWORD} -h 127.0.0.1 ${DB_NAME} < "${DEPLOY_PATH}/database/add-api-key-plaintext-column.sql" 2>/dev/null && echo "✅ API key plaintext column added" || echo "⚠️ API key plaintext column may already exist (ok to ignore)"
 fi
 
+# Run OpenRouter columns migration (if needed)
+if [ -f "${DEPLOY_PATH}/database/add-openrouter-columns.sql" ]; then
+  echo "Running OpenRouter columns migration (if needed)..."
+  mysql -u ${DB_USER} -p${DB_PASSWORD} -h 127.0.0.1 ${DB_NAME} < "${DEPLOY_PATH}/database/add-openrouter-columns.sql" 2>/dev/null && echo "✅ OpenRouter columns added" || echo "⚠️ OpenRouter columns may already exist (ok to ignore)"
+fi
+
 # Restart service to pick up new .env
 systemctl daemon-reload
 systemctl restart ${SERVICE_NAME}

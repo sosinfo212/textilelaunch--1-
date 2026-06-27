@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { Product, ProductAttribute, ProductReview } from '../types';
-import { generateProductDescription } from '../services/geminiService';
+import { generateProductDescription } from '../services/aiService';
 import { fileToBase64, convertImagesToBase64, isVideo, isImage } from '../src/utils/imageUtils';
 import { PRODUCT_CURRENCIES } from '../src/utils/currency';
 import { Sparkles, Plus, Trash2, Image as ImageIcon, Loader2, Edit2, X, Eye, EyeOff, Video, Star, MessageSquare } from 'lucide-react';
@@ -145,10 +145,10 @@ export const EditProduct: React.FC = () => {
     if (!name) return alert("Veuillez entrer un nom de produit d'abord.");
     setIsGenerating(true);
     // Pass the API Key from settings
-    const desc = await generateProductDescription(name, "textile, mode, confort, qualité", settings.geminiApiKey);
+    const desc = await generateProductDescription(name, "textile, mode, confort, qualité", settings.llmModel);
     setDescription(desc);
     setIsGenerating(false);
-    setIsPreviewMode(false);
+    setIsPreviewMode(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

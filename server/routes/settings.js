@@ -27,7 +27,7 @@ router.get('/', authenticate, async (req, res) => {
 
     // Select specific columns to avoid issues if pixel columns don't exist yet
     const [settings] = await db.execute(
-      'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code, COALESCE(tiktok_pixel_code, "") as tiktok_pixel_code, COALESCE(stripe_publishable_key, "") as stripe_publishable_key, COALESCE(stripe_secret_key, "") as stripe_secret_key, api_key_hash FROM app_settings WHERE user_id = ?',
+      'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(openrouter_api_key, "") as openrouter_api_key, COALESCE(llm_model, "google/gemini-2.0-flash-001") as llm_model, COALESCE(facebook_pixel_code, "") as facebook_pixel_code, COALESCE(tiktok_pixel_code, "") as tiktok_pixel_code, COALESCE(stripe_publishable_key, "") as stripe_publishable_key, COALESCE(stripe_secret_key, "") as stripe_secret_key, api_key_hash FROM app_settings WHERE user_id = ?',
       [userId]
     );
 
@@ -39,7 +39,7 @@ router.get('/', authenticate, async (req, res) => {
       );
       
       const [newSettings] = await db.execute(
-        'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code, COALESCE(tiktok_pixel_code, "") as tiktok_pixel_code, COALESCE(stripe_publishable_key, "") as stripe_publishable_key, COALESCE(stripe_secret_key, "") as stripe_secret_key, api_key_hash FROM app_settings WHERE user_id = ?',
+        'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(openrouter_api_key, "") as openrouter_api_key, COALESCE(llm_model, "google/gemini-2.0-flash-001") as llm_model, COALESCE(facebook_pixel_code, "") as facebook_pixel_code, COALESCE(tiktok_pixel_code, "") as tiktok_pixel_code, COALESCE(stripe_publishable_key, "") as stripe_publishable_key, COALESCE(stripe_secret_key, "") as stripe_secret_key, api_key_hash FROM app_settings WHERE user_id = ?',
         [userId]
       );
       
@@ -65,6 +65,19 @@ router.get('/', authenticate, async (req, res) => {
           }
         } catch (retryError) {
           console.error('Retry without api_key_hash failed:', retryError);
+        }
+      } else if (error.message.includes('openrouter_api_key') || error.message.includes('llm_model')) {
+        try {
+          const [settings] = await db.execute(
+            'SELECT user_id, shop_name, logo_url, gemini_api_key, COALESCE(facebook_pixel_code, "") as facebook_pixel_code, COALESCE(tiktok_pixel_code, "") as tiktok_pixel_code, COALESCE(stripe_publishable_key, "") as stripe_publishable_key, COALESCE(stripe_secret_key, "") as stripe_secret_key, api_key_hash FROM app_settings WHERE user_id = ?',
+            [userId]
+          );
+          if (settings.length > 0) {
+            const formatted = formatSettings({ ...settings[0], openrouter_api_key: '', llm_model: 'google/gemini-2.0-flash-001' });
+            return res.json({ settings: formatted });
+          }
+        } catch (retryError) {
+          console.error('Retry without openrouter columns failed:', retryError);
         }
       } else if (error.message.includes('facebook_pixel_code') || error.message.includes('tiktok_pixel_code')) {
         console.log('[Settings] pixel column missing, trying without it');
@@ -96,7 +109,7 @@ router.put('/', authenticate, async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { shopName, logoUrl, geminiApiKey, facebookPixelCode, tiktokPixelCode, stripePublishableKey, stripeSecretKey } = req.body;
+    const { shopName, logoUrl, geminiApiKey, openrouterApiKey, llmModel, facebookPixelCode, tiktokPixelCode, stripePublishableKey, stripeSecretKey } = req.body;
     
     console.log(`[Settings] Update request for userId: ${userId}`);
     console.log(`[Settings] Received data:`, {
@@ -135,6 +148,14 @@ router.put('/', authenticate, async (req, res) => {
       if (geminiApiKey !== undefined) {
         updates.push('gemini_api_key = ?');
         values.push(geminiApiKey);
+      }
+      if (openrouterApiKey !== undefined) {
+        updates.push('openrouter_api_key = ?');
+        values.push(openrouterApiKey);
+      }
+      if (llmModel !== undefined) {
+        updates.push('llm_model = ?');
+        values.push(llmModel || 'google/gemini-2.0-flash-001');
       }
       if (facebookPixelCode !== undefined) {
         updates.push('facebook_pixel_code = ?');
@@ -307,6 +328,8 @@ function formatSettings(row) {
     shopName: row.shop_name || 'Trendy Cosmetix Store',
     logoUrl: row.logo_url || '',
     geminiApiKey: row.gemini_api_key || '',
+    openrouterApiKey: row.openrouter_api_key || '',
+    llmModel: row.llm_model || 'google/gemini-2.0-flash-001',
     facebookPixelCode: row.facebook_pixel_code || '',
     tiktokPixelCode: row.tiktok_pixel_code || '',
     stripePublishableKey: row.stripe_publishable_key || '',

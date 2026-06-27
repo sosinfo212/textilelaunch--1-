@@ -9,7 +9,7 @@ import productsRoutes from './routes/products.js';
 import ordersRoutes from './routes/orders.js';
 import templatesRoutes from './routes/templates.js';
 import settingsRoutes from './routes/settings.js';
-import geminiRoutes from './routes/gemini.js';
+import aiRoutes from './routes/ai.js';
 import analyticsRoutes from './routes/analytics.js';
 import trackingRoutes from './routes/tracking.js';
 import integrationsRoutes from './routes/integrations.js';
@@ -167,7 +167,8 @@ app.use('/api/products', productsRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/templates', templatesRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/gemini', geminiRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/gemini', aiRoutes); // legacy alias
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/tracking', trackingRoutes);
 app.use('/api/integrations', integrationsRoutes);

@@ -6,6 +6,7 @@ import { Save, User, Settings as SettingsIcon, Plus, Trash2, Shield, Key, Image,
 import { User as UserType } from '../types';
 import { getApiDocsUrl, logsAPI, settingsAPI } from '../src/utils/api';
 import { getLogs, clearLogs, subscribe, LogEntry } from '../src/utils/logStore';
+import { LLM_MODEL_OPTIONS, LLM_MODEL_CUSTOM, DEFAULT_LLM_MODEL } from '../constants/llmModels';
 
 type ServerLogEntry = { id: string; time: string; level: string; method?: string; url?: string; status?: number; message: string; details?: string; count?: number; source?: string };
 
@@ -30,7 +31,9 @@ export const SettingsPage: React.FC = () => {
     // Settings Form
     const [shopName, setShopName] = useState(settings.shopName);
     const [logoUrl, setLogoUrl] = useState(settings.logoUrl);
-    const [geminiApiKey, setGeminiApiKey] = useState(settings.geminiApiKey);
+    const [openrouterApiKey, setOpenrouterApiKey] = useState(settings.openrouterApiKey || '');
+    const [llmModel, setLlmModel] = useState(settings.llmModel || DEFAULT_LLM_MODEL);
+    const [llmModelCustom, setLlmModelCustom] = useState('');
     const [facebookPixelCode, setFacebookPixelCode] = useState(settings.facebookPixelCode || '');
     const [tiktokPixelCode, setTiktokPixelCode] = useState(settings.tiktokPixelCode || '');
     const [stripePublishableKey, setStripePublishableKey] = useState(settings.stripePublishableKey || '');
@@ -41,7 +44,11 @@ export const SettingsPage: React.FC = () => {
     useEffect(() => {
         setShopName(settings.shopName);
         setLogoUrl(settings.logoUrl);
-        setGeminiApiKey(settings.geminiApiKey);
+        setOpenrouterApiKey(settings.openrouterApiKey || '');
+        const model = settings.llmModel || DEFAULT_LLM_MODEL;
+        const known = LLM_MODEL_OPTIONS.some((m) => m.id === model);
+        setLlmModel(known ? model : LLM_MODEL_CUSTOM);
+        setLlmModelCustom(known ? '' : model);
         setFacebookPixelCode(settings.facebookPixelCode || '');
         setTiktokPixelCode(settings.tiktokPixelCode || '');
         setStripePublishableKey(settings.stripePublishableKey || '');
@@ -61,7 +68,9 @@ export const SettingsPage: React.FC = () => {
                     userId: user.id,
                     shopName,
                     logoUrl,
-                    geminiApiKey,
+                    geminiApiKey: '',
+                    openrouterApiKey,
+                    llmModel: llmModel === LLM_MODEL_CUSTOM ? (llmModelCustom.trim() || DEFAULT_LLM_MODEL) : llmModel,
                     facebookPixelCode,
                     tiktokPixelCode,
                     stripePublishableKey,
@@ -283,23 +292,49 @@ export const SettingsPage: React.FC = () => {
                                         <Key size={20} className="text-gray-500" />
                                         Clés API
                                     </h2>
-                                    <p className="text-sm text-gray-600">Votre clé Gemini (descriptions) et votre clé API TextileLaunch (import, etc.) sont propres à votre compte.</p>
+                                    <p className="text-sm text-gray-600">OpenRouter (descriptions produit IA) et clé API TextileLaunch (import, etc.).</p>
                                 <div className="space-y-5 rounded-xl bg-gray-50/80 p-4 border border-gray-100">
                             <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Clé API Gemini (Google)</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Clé API OpenRouter</label>
                                         <div className="flex rounded-lg border border-gray-300 overflow-hidden">
                                             <span className="inline-flex items-center px-3 bg-gray-50 text-gray-500 text-sm border-r border-gray-300">
                                         <Key size={16} />
                                     </span>
                                     <input
                                         type="password"
-                                        value={geminiApiKey}
-                                        onChange={e => setGeminiApiKey(e.target.value)}
+                                        value={openrouterApiKey}
+                                        onChange={e => setOpenrouterApiKey(e.target.value)}
                                                 className="flex-1 min-w-0 py-2 px-3 text-sm focus:ring-brand-500 focus:border-brand-500 border-0"
-                                        placeholder="AIzaSy..."
+                                        placeholder="sk-or-v1-..."
                                     />
                                 </div>
-                                        <p className="mt-1 text-xs text-gray-500">Nécessaire pour la génération automatique de descriptions produit.</p>
+                                        <p className="mt-1 text-xs text-gray-500">
+                                          Nécessaire pour la génération automatique de descriptions. Obtenez une clé sur{' '}
+                                          <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">openrouter.ai/keys</a>.
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Modèle LLM (OpenRouter)</label>
+                                        <select
+                                            value={llmModel}
+                                            onChange={(e) => setLlmModel(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-brand-500 focus:border-brand-500"
+                                        >
+                                            {LLM_MODEL_OPTIONS.map((m) => (
+                                                <option key={m.id} value={m.id}>{m.label} ({m.id})</option>
+                                            ))}
+                                            <option value={LLM_MODEL_CUSTOM}>Autre (saisir l’identifiant OpenRouter)</option>
+                                        </select>
+                                        {llmModel === LLM_MODEL_CUSTOM && (
+                                            <input
+                                                type="text"
+                                                value={llmModelCustom}
+                                                onChange={(e) => setLlmModelCustom(e.target.value)}
+                                                placeholder="ex. anthropic/claude-3.5-sonnet"
+                                                className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-brand-500 focus:border-brand-500"
+                                            />
+                                        )}
+                                        <p className="mt-1 text-xs text-gray-500">Modèle utilisé pour « Régénérer avec IA » dans l’édition produit.</p>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Clé API TextileLaunch</label>
