@@ -101,6 +101,9 @@ sudo -u ${APP_USER} npm install
 # Install scrapper Python deps and Playwright Chromium (for scraper feature)
 if [ -f "${DEPLOY_PATH}/scrapper/requirements.txt" ]; then
     sudo -u ${APP_USER} pip3 install --user -r "${DEPLOY_PATH}/scrapper/requirements.txt"
+    dnf -y install nspr nss nss-util atk at-spi2-atk cups-libs libdrm libXcomposite \
+      libXdamage libXrandr mesa-libgbm pango alsa-lib libxkbcommon libXScrnSaver libXcursor 2>/dev/null || true
+    python3 -m playwright install-deps chromium 2>/dev/null || true
     sudo -u ${APP_USER} python3 -m playwright install chromium
 fi
 

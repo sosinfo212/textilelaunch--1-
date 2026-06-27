@@ -51,15 +51,12 @@ else
     sed -i "s/^DB_HOST=.*/DB_HOST=127.0.0.1/" ${DEPLOY_PATH}/.env
     sed -i "s/^DB_PORT=.*/DB_PORT=3306/" ${DEPLOY_PATH}/.env
     
-    # Ensure other required vars exist
-    if ! grep -q "^COOKIE_SECURE=" ${DEPLOY_PATH}/.env; then
-        echo "COOKIE_SECURE=true" >> ${DEPLOY_PATH}/.env
-    fi
-    if ! grep -q "^COOKIE_SAMESITE=" ${DEPLOY_PATH}/.env; then
-        echo "COOKIE_SAMESITE=lax" >> ${DEPLOY_PATH}/.env
-    fi
-    if ! grep -q "^FRONTEND_URL=" ${DEPLOY_PATH}/.env; then
-        echo "FRONTEND_URL=https://trendycosmetix.com" >> ${DEPLOY_PATH}/.env
+    # Ensure production domain + secure cookies (always sync after DNS/SSL migration)
+    sed -i "s|^FRONTEND_URL=.*|FRONTEND_URL=https://trendycosmetix.com|" ${DEPLOY_PATH}/.env
+    sed -i "s|^COOKIE_SECURE=.*|COOKIE_SECURE=true|" ${DEPLOY_PATH}/.env
+    sed -i "s|^COOKIE_SAMESITE=.*|COOKIE_SAMESITE=lax|" ${DEPLOY_PATH}/.env
+    if ! grep -q "^SCRAPER_API_URL=" ${DEPLOY_PATH}/.env; then
+        echo "SCRAPER_API_URL=https://trendycosmetix.com/api" >> ${DEPLOY_PATH}/.env
     fi
     
     echo "✅ Updated .env file"
