@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { PageElement, Product, ProductAttribute, LandingPageTemplate } from '../types';
 import { formatPrice } from '../src/utils/currency';
+import { resolveProductImageUrl } from '../src/utils/imageUtils';
 import { ShoppingBag, ChevronLeft, ChevronRight, Truck, ShieldCheck, Star, Check, AlertCircle } from 'lucide-react';
 
 interface RendererProps {
@@ -151,7 +152,7 @@ export const LandingPageRenderer: React.FC<RendererProps> = ({
                         {el.type === 'product-gallery' && (() => {
                             // Combine images and videos
                             const allMedia: Array<{ type: 'image' | 'video'; src: string }> = [];
-                            product.images.forEach(img => allMedia.push({ type: 'image', src: img }));
+                            product.images.forEach(img => allMedia.push({ type: 'image', src: resolveProductImageUrl(img, product.supplier) }));
                             if (product.videos) {
                               product.videos.forEach(video => allMedia.push({ type: 'video', src: video }));
                             }
@@ -353,10 +354,10 @@ const CustomCodeRenderer: React.FC<{ htmlCode: string; product: Product; formSta
         .replace(/{product_regular_price}/g, product.regularPrice ? formatPrice(product.regularPrice, product.currency) : '')
         .replace(/{product_description}/g, product.description)
         .replace(/{product_sku}/g, (product.showSku && product.sku) ? product.sku : '')
-        .replace(/{product_image_0}/g, product.images[0] || '')
-        .replace(/{product_image_1}/g, product.images[1] || '')
-        .replace(/{product_image_2}/g, product.images[2] || '')
-        .replace(/{product_image_3}/g, product.images[3] || '');
+        .replace(/{product_image_0}/g, resolveProductImageUrl(product.images[0] || '', product.supplier))
+        .replace(/{product_image_1}/g, resolveProductImageUrl(product.images[1] || '', product.supplier))
+        .replace(/{product_image_2}/g, resolveProductImageUrl(product.images[2] || '', product.supplier))
+        .replace(/{product_image_3}/g, resolveProductImageUrl(product.images[3] || '', product.supplier));
 
     // Helper: escape user-provided shortcode params for safe HTML
     const escapeParam = (s: string) => String(s)
@@ -408,7 +409,7 @@ const CustomCodeRenderer: React.FC<{ htmlCode: string; product: Product; formSta
 
     // Combine images and videos
     const allMedia: Array<{ type: 'image' | 'video'; src: string }> = [];
-    product.images.forEach(img => allMedia.push({ type: 'image', src: img }));
+    product.images.forEach(img => allMedia.push({ type: 'image', src: resolveProductImageUrl(img, product.supplier) }));
     if (product.videos) {
         product.videos.forEach(video => allMedia.push({ type: 'video', src: video }));
     }

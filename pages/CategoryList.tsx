@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { formatPrice } from '../src/utils/currency';
+import { resolveProductImageUrl } from '../src/utils/imageUtils';
 import { Tag, Package, ChevronRight, Layers, Plus, X, Trash2 } from 'lucide-react';
 import { Product } from '../types';
 
@@ -201,7 +202,7 @@ export const CategoryList: React.FC = () => {
                         <Link to={`/edit-product/${product.id}`} className="flex-1 flex items-center min-w-0 py-4 pr-4">
                             <div className="flex-shrink-0 h-12 w-12 bg-gray-200 rounded-md overflow-hidden ml-3">
                                 {product.images[0] ? (
-                                    <img src={product.images[0]} alt="" className="h-full w-full object-cover" />
+                                    <img src={resolveProductImageUrl(product.images[0], product.supplier)} alt="" className="h-full w-full object-cover" />
                                 ) : (
                                     <Package className="h-6 w-6 text-gray-400 m-3" />
                                 )}

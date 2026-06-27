@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { formatPrice } from '../src/utils/currency';
+import { resolveProductImageUrl } from '../src/utils/imageUtils';
 import { scraperAPI, settingsAPI, integrationsAPI } from '../src/utils/api';
 import { Eye, Edit2, Tag, Box, Truck, Trash2, BarChart2, Plus, Scissors, X, RefreshCw, Filter } from 'lucide-react';
 import { Product } from '../types';
@@ -447,7 +448,7 @@ export const SellerDashboard: React.FC = () => {
                 </div>
                 {product.images && product.images.length > 0 ? (
                   <img 
-                    src={product.images[0]} 
+                    src={resolveProductImageUrl(product.images[0], product.supplier)} 
                     alt={product.name} 
                     className="w-full h-full object-cover"
                     onError={(e) => {

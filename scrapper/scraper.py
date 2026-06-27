@@ -12,7 +12,7 @@ import re
 import sys
 from pathlib import Path
 from typing import Any, List, Optional, Set
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import requests
 
@@ -95,16 +95,33 @@ def _parse_price(price_str: Any) -> float:
         return 0.0
 
 
-def _normalize_images(images: Any) -> List[str]:
-    """Convert images to list of URL strings. If string, split by comma; if list, return as is."""
+def _absolutize_url(url: str, base: str) -> str:
+    """Turn relative image paths into absolute URLs using the affiliate site origin."""
+    url = (url or "").strip()
+    if not url or url.startswith("data:") or url.startswith("http://") or url.startswith("https://"):
+        return url
+    if url.startswith("//"):
+        scheme = urlparse(base).scheme or "https"
+        return f"{scheme}:{url}"
+    if not base:
+        return url
+    return urljoin(base.rstrip("/") + "/", url.lstrip("/"))
+
+
+def _normalize_images(images: Any, base_url: str = "") -> List[str]:
+    """Convert images to list of absolute URL strings."""
     if images is None:
         return []
     if isinstance(images, list):
-        return [str(u).strip() for u in images if u and str(u).strip()]
-    s = str(images).strip()
-    if not s:
-        return []
-    return [u.strip() for u in s.split(",") if u.strip()]
+        raw = [str(u).strip() for u in images if u and str(u).strip()]
+    else:
+        s = str(images).strip()
+        if not s:
+            return []
+        raw = [u.strip() for u in s.split(",") if u.strip()]
+    if not base_url:
+        return raw
+    return [_absolutize_url(u, base_url) for u in raw]
 
 
 def transform_product_to_api(raw: dict[str, Any]) -> dict[str, Any]:
@@ -115,15 +132,16 @@ def transform_product_to_api(raw: dict[str, Any]) -> dict[str, Any]:
         cost_val = _parse_price(raw_cost)
         if cost_val < 0:
             cost_val = None
+    base_url = (raw.get("base_url") or "").strip()
     return {
         "name": str((raw.get("name") or "")).strip(),
         "price": _parse_price(raw.get("price")),
         "cost": cost_val,
-        "images": _normalize_images(raw.get("images")),
+        "images": _normalize_images(raw.get("images"), base_url),
         "description": str((raw.get("description") or "")).strip(),
         "currency": str((raw.get("currency") or "MAD")).strip(),
         "attributes": raw.get("attributes") or [],
-        "supplier": str((raw.get("website") or "")).strip(),
+        "supplier": base_url or str((raw.get("website") or "")).strip(),
         "sku": str((raw.get("sku") or "")).strip(),
     }
 
@@ -548,13 +566,14 @@ async def scrape_product_details(
         pass
 
     # Images: div.swiper-slide > img (src attributes, comma-separated)
+    page_origin = f"{urlparse(product_url).scheme}://{urlparse(product_url).netloc}"
     try:
         imgs = await page.query_selector_all(SELECTORS["product_images"])
         srcs: list[str] = []
         for el in imgs:
             src = await el.get_attribute("src")
             if src and src.strip():
-                srcs.append(src.strip())
+                srcs.append(_absolutize_url(src.strip(), page_origin))
         result["images"] = ",".join(srcs) if srcs else ""
     except Exception:
         pass
@@ -692,6 +711,7 @@ async def main(
                         "price": product_data.get("price", ""),
                         "cost": product_data.get("cost", ""),
                         "images": product_data.get("images", ""),
+                        "base_url": config["base_url"],
                         "website": product_data.get("website", config["website_name"]),
                         "description": product_data.get("description", ""),
                         "currency": product_data.get("currency", DEFAULT_CURRENCY),

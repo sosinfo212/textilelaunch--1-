@@ -1,6 +1,25 @@
 // Utility functions for image handling
 
 /**
+ * Resolve relative product image paths (e.g. /product_photos/x.jpg) to absolute URLs
+ * using the affiliate supplier / site origin. Fixes scraped images stored without host.
+ */
+export const resolveProductImageUrl = (url: string, supplier?: string): string => {
+  if (!url) return url;
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('//')) return `https:${url}`;
+  if (!url.startsWith('/')) return url;
+
+  let base = (supplier || '').trim();
+  if (!base) return url;
+
+  if (!base.startsWith('http://') && !base.startsWith('https://')) {
+    base = base.includes('.') ? `https://${base}` : `https://${base}.com`;
+  }
+  return `${base.replace(/\/$/, '')}${url}`;
+};
+
+/**
  * Resize and compress image before converting to base64
  */
 const resizeImage = (file: File, maxWidth: number = 1200, maxHeight: number = 1200, quality: number = 0.8): Promise<Blob> => {

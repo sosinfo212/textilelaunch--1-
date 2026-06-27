@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { Order, Product } from '../types';
-import { isVideo, isImage } from '../src/utils/imageUtils';
+import { isVideo, isImage, resolveProductImageUrl } from '../src/utils/imageUtils';
 import { formatPrice } from '../src/utils/currency';
 import { CheckCircle, ArrowLeft, Phone, MapPin, Truck, ShieldCheck, Star, ShoppingCart, Plus, Minus, Home, AlertCircle, Video } from 'lucide-react';
 import { LandingPageRenderer } from '../components/LandingPageRenderer';
@@ -82,7 +82,7 @@ export const ProductLanding: React.FC = () => {
   const media = useMemo(() => {
     if (!product) return [];
     const allMedia: Array<{ type: 'image' | 'video'; src: string }> = [];
-    product.images.forEach(img => allMedia.push({ type: 'image', src: img }));
+    product.images.forEach(img => allMedia.push({ type: 'image', src: resolveProductImageUrl(img, product.supplier) }));
     if (product.videos) {
       product.videos.forEach(video => allMedia.push({ type: 'video', src: video }));
     }
